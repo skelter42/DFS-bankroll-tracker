@@ -248,9 +248,27 @@ header,.filters,.tabs,.main{padding-left:16px;padding-right:16px;}
 .cb-best-badge{display:inline-block;font-family:“IBM Plex Mono”,monospace;font-size:.55rem;padding:1px 5px;border-radius:2px;background:rgba(5,216,158,.12);color:var(–gr);border:1px solid rgba(5,216,158,.2);margin-left:4px;vertical-align:middle;}
 .cb-filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
 .cb-sort-lbl{font-family:“IBM Plex Mono”,monospace;font-size:.62rem;color:var(–mu);text-transform:uppercase;letter-spacing:.8px;}
+
+#upload-bar{background:var(--s2);border-bottom:1px solid var(--bd);padding:8px 32px;}
+#upload-drop{display:flex;align-items:center;gap:10px;padding:7px 14px;border:1px dashed var(--b3);border-radius:6px;cursor:pointer;transition:border-color .15s;flex-wrap:wrap;}
+#upload-drop:hover,#upload-drop.drag-over{border-color:var(--gr);}
+.up-icon{font-size:1rem;color:var(--mu2);}
+.up-text{font-family:"IBM Plex Mono",monospace;font-size:0.7rem;color:var(--mu2);}
+.up-browse{color:var(--bl);cursor:pointer;text-decoration:underline;}
+.up-status{font-family:"IBM Plex Mono",monospace;font-size:0.68rem;margin-left:auto;white-space:nowrap;}
+.up-ok{color:var(--gr);}.up-err{color:var(--re);}.up-spin{color:var(--am);}
 </style>
 </head>
-<body><header>
+<body>
+<div id="upload-bar">
+  <div id="upload-drop">
+    <span class="up-icon">&#8679;</span>
+    <span class="up-text">Drop your DraftKings entries CSV here, or <label for="csv-file-input" class="up-browse">browse</label> &mdash; works with 100K+ rows, all data stays in your browser</span>
+    <input type="file" id="csv-file-input" accept=".csv,.txt" style="display:none">
+    <span id="upload-status" class="up-status">No file loaded</span>
+  </div>
+</div>
+<header>
   <div class="hrow">
     <div>
       <div class="htitle">DK <em>Decision Center</em></div>
@@ -1415,5 +1433,297 @@ document.getElementById("rateToggle").addEventListener("click",e=>{
 });
 
 render();
-</script></body>
-</html>
+
+// ═══════════════════════════════════════════════════════════
+//  CSV UPLOAD & LIVE DATA PROCESSING
+// ═══════════════════════════════════════════════════════════
+(function(){
+  var dropEl = document.getElementById('upload-drop');
+  var inputEl = document.getElementById('csv-file-input');
+
+  dropEl.addEventListener('dragover', function(e){ e.preventDefault(); dropEl.classList.add('drag-over'); });
+  dropEl.addEventListener('dragleave', function(){ dropEl.classList.remove('drag-over'); });
+  dropEl.addEventListener('drop', function(e){ e.preventDefault(); dropEl.classList.remove('drag-over'); var f=e.dataTransfer.files[0]; if(f) processFile(f); });
+  inputEl.addEventListener('change', function(e){ var f=e.target.files[0]; if(f) processFile(f); });
+
+  function setStatus(msg, cls){
+    var el=document.getElementById('upload-status');
+    el.textContent=msg; el.className='up-status '+(cls||'');
+  }
+
+  function processFile(file){
+    setStatus('Reading…','up-spin');
+    var reader=new FileReader();
+    reader.onload=function(e){
+      setStatus('Parsing…','up-spin');
+      setTimeout(function(){
+        try{
+          var rows=parseCSV(e.target.result);
+          if(!rows.length){setStatus('No data rows found','up-err');return;}
+          setStatus('Computing stats…','up-spin');
+          setTimeout(function(){
+            try{ computeAll(rows); }
+            catch(err){ setStatus('Error: '+err.message,'up-err'); console.error(err); }
+          },10);
+        }catch(err){ setStatus('Parse error: '+err.message,'up-err'); console.error(err); }
+      },10);
+    };
+    reader.readAsText(file);
+  }
+
+  function parseCSV(text){
+    var lines=text.split(/\r?\n/);
+    var nonEmpty=lines.filter(function(l){return l.trim();});
+    if(nonEmpty.length<2) return [];
+    var first=nonEmpty[0];
+    var delim=first.indexOf('\t')>-1?'\t':',';
+    var headers=splitLine(first,delim).map(function(h){return h.trim().replace(/^"|"$/g,'');});
+    var rows=[];
+    for(var i=1;i<nonEmpty.length;i++){
+      var vals=splitLine(nonEmpty[i],delim);
+      if(vals.length<5) continue;
+      var row={};
+      headers.forEach(function(h,j){ row[h]=(vals[j]||'').trim().replace(/^"|"$/g,''); });
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  function splitLine(line,delim){
+    var res=[],cur='',inQ=false;
+    for(var i=0;i<line.length;i++){
+      var ch=line[i];
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===delim&&!inQ){res.push(cur);cur='';}
+      else{cur+=ch;}
+    }
+    res.push(cur);
+    return res;
+  }
+
+  function parseDate(s){
+    if(!s||s==='########') return null;
+    var d=new Date(s);
+    if(!isNaN(d.getTime())) return d;
+    var p=s.split('/');
+    if(p.length===3){
+      var yr=p[2].length===4?parseInt(p[2]):2000+parseInt(p[2]);
+      d=new Date(yr,parseInt(p[0])-1,parseInt(p[1]));
+      if(!isNaN(d.getTime())) return d;
+    }
+    return null;
+  }
+
+  function norm(row){
+    var gt=(row['Game_Type']||row['game_type']||'').toLowerCase();
+    var fmt=gt.indexOf('showdown')>-1?'Showdown':gt.indexOf('best ball')>-1?'Best Ball':'Classic';
+    var sport=(row['Sport']||row['sport']||'').trim().toUpperCase();
+    var date=parseDate(row['Contest_Date_EST']||row['contest_date_est']||'');
+    var place=parseInt(row['Place']||row['place'])||0;
+    var ce=Math.max(1,parseInt(row['Contest_Entries']||row['contest_entries'])||1);
+    var fee=parseFloat((row['Entry_Fee']||row['entry_fee']||'0').replace(/[$,]/g,''))||0;
+    var wnt=parseFloat((row['Winnings_Non_Ticket']||'0').replace(/[$,]/g,''))||0;
+    var wt=parseFloat((row['Winnings_Ticket']||'0').replace(/[$,]/g,''))||0;
+    var win=wnt+wt;
+    var pct=place/ce;
+    var ck=row['Contest_Key']||row['contest_key']||'';
+    return {sport:sport,format:fmt,date:date,place:place,ce:ce,fee:fee,win:win,
+      t1:pct<=0.01?1:0,t10:pct<=0.10?1:0,t20:pct<=0.20?1:0,
+      cashed:win>0?1:0,ck:ck};
+  }
+
+  function agg(ents){
+    var n=ents.length;
+    if(!n) return null;
+    var fees=0,wins=0;
+    ents.forEach(function(r){fees+=r.fee;wins+=r.win;});
+    var net=wins-fees,roi=fees>0?net/fees*100:0;
+    var t1=ents.filter(function(r){return r.t1;}).length/n*100;
+    var t10=ents.filter(function(r){return r.t10;}).length/n*100;
+    var t20=ents.filter(function(r){return r.t20;}).length/n*100;
+    function rr(v){return Math.round(v*100)/100;}
+    return{count:n,fees:rr(fees),wins:rr(wins),net:rr(net),roi:Math.round(roi*10)/10,
+           top1:rr(t1),top10:rr(t10),top20:rr(t20)};
+  }
+
+  function feeBucket(f){
+    if(f<=0.10) return '$0.10';
+    if(f<=0.25) return '$0.25';
+    if(f<=0.50) return '$0.50';
+    if(f<=1.00) return '$1';
+    if(f<=2.00) return '$2';
+    if(f<=5.00) return '$5';
+    return '$5+';
+  }
+
+  function slope(ys){
+    var n=ys.length;
+    if(n<2) return 0;
+    var sx=0,sy=0,sxy=0,sx2=0;
+    for(var i=0;i<n;i++){sx+=i;sy+=ys[i];sxy+=i*ys[i];sx2+=i*i;}
+    var d=n*sx2-sx*sx;
+    return d?Math.round((n*sxy-sx*sy)/d*100)/100:0;
+  }
+
+  function computeAll(rawRows){
+    var entries=rawRows.map(norm).filter(function(r){return r.sport&&r.date;});
+    if(!entries.length){setStatus('No valid rows (need Sport + date)','up-err');return;}
+
+    var maxTs=Math.max.apply(null,entries.map(function(r){return r.date.getTime();}));
+    var cut=function(days){return new Date(maxTs-days*86400000);};
+    var cuts={T1M:cut(30),T6M:cut(180),T12M:cut(365),ALL:new Date(0)};
+
+    // group by key
+    var byKey={};
+    entries.forEach(function(r){
+      var k=r.sport+'|'+r.format;
+      if(!byKey[k]) byKey[k]=[];
+      byKey[k].push(r);
+    });
+
+    var nPD={},nMD={},nFD={},nSD={},nMOD={},nED={},nPB={},nCBD={};
+    var BK={top1:1.2,top10:12,top20:24};
+
+    Object.keys(byKey).forEach(function(k){
+      var ents=byKey[k];
+
+      // PD
+      nPD[k]={};
+      Object.keys(cuts).forEach(function(p){
+        nPD[k][p]=agg(ents.filter(function(r){return r.date>=cuts[p];}));
+      });
+
+      // MD
+      var byMo={};
+      ents.forEach(function(r){
+        var mo=r.date.getFullYear()+'-'+('0'+(r.date.getMonth()+1)).slice(-2);
+        if(!byMo[mo]) byMo[mo]=[];
+        byMo[mo].push(r);
+      });
+      nMD[k]=Object.keys(byMo).sort().map(function(mo){
+        var es=byMo[mo],n=es.length;
+        return{month:mo,count:n,
+          top1:Math.round(es.filter(function(r){return r.t1;}).length/n*10000)/100,
+          top10:Math.round(es.filter(function(r){return r.t10;}).length/n*10000)/100,
+          top20:Math.round(es.filter(function(r){return r.t20;}).length/n*10000)/100};
+      });
+
+      // FD
+      nFD[k]={
+        small:agg(ents.filter(function(r){return r.ce<500;})),
+        medium:agg(ents.filter(function(r){return r.ce>=500&&r.ce<=5000;})),
+        large:agg(ents.filter(function(r){return r.ce>5000;}))
+      };
+
+      // SD
+      nSD[k]={
+        penny:agg(ents.filter(function(r){return r.fee<=0.50;})),
+        low:agg(ents.filter(function(r){return r.fee>0.50&&r.fee<=2;})),
+        mid:agg(ents.filter(function(r){return r.fee>2&&r.fee<=5;})),
+        high:agg(ents.filter(function(r){return r.fee>5;}))
+      };
+
+      // MOD
+      var mos=nMD[k];
+      nMOD[k]={slope1:slope(mos.map(function(m){return m.top1;})),
+               slope10:slope(mos.map(function(m){return m.top10;})),
+               slope20:slope(mos.map(function(m){return m.top20;})),
+               months:mos.length,n:mos.length};
+
+      // ED
+      var all=nPD[k]['ALL'];
+      if(all){
+        var mod=nMOD[k];
+        var b1d=Math.round((all.top1-BK.top1)*100)/100;
+        var b10d=Math.round((all.top10-BK.top10)*100)/100;
+        var b20d=Math.round((all.top20-BK.top20)*100)/100;
+        var bench=Math.max(0,Math.min(50,25+b10d*1.5));
+        var trend=Math.max(0,Math.min(25,12.5+mod.slope10*4));
+        var conf=Math.min(25,all.count/40);
+        var sc=Math.round((bench+trend+conf)*10)/10;
+        nED[k]={score:sc,bench_component:Math.round(bench*10)/10,
+                trend_component:Math.round(trend*10)/10,
+                confidence_component:Math.round(conf*10)/10,
+                b1_delta:b1d,b10_delta:b10d,b20_delta:b20d};
+
+        // PB
+        var t1m=nPD[k]['T1M'];
+        var rec,reason;
+        if(sc>=62&&mod.slope10>=0){rec='INCREASE';reason='Above benchmark with positive momentum';}
+        else if(sc>=48){rec='MAINTAIN';reason='At or near benchmark — hold current exposure';}
+        else if(sc>=32){rec='REDUCE';reason='Below benchmark — reduce exposure';}
+        else{rec='SIT OUT';reason='Significantly below benchmark — sit out';}
+        var parts=k.split('|');
+        var cnf=all.count>=100?'HIGH':all.count>=30?'MEDIUM':all.count>=10?'LOW':'INSUFFICIENT';
+        nPB[k]={sport:parts[0],format:parts[1],rec:rec,reason:reason,confidence:cnf,
+                t1m_count:t1m?t1m.count:0,t1m:t1m?t1m.top10:null,
+                ref:{top1:all.top1,top10:all.top10,top20:all.top20,roi:all.roi,net:all.net,count:all.count},
+                d1:b1d,d10:b10d,d20:b20d,mom:mod.slope10,
+                composite_delta:Math.round((sc-50)*10)/10};
+      }
+
+      // CBD
+      var tot=agg(ents);
+      if(tot){
+        var byFee={},feeG={};
+        ents.forEach(function(r){var fb=feeBucket(r.fee);if(!feeG[fb])feeG[fb]=[];feeG[fb].push(r);});
+        Object.keys(feeG).forEach(function(fb){
+          var fe=feeG[fb],s=agg(fe);
+          if(!s) return;
+          var slates=new Set(fe.map(function(r){return r.ck;}));
+          var winSlates=new Set(fe.filter(function(r){return r.cashed;}).map(function(r){return r.ck;}));
+          byFee[fb]=Object.assign({},s,{
+            avg_fee:Math.round(fe.reduce(function(a,r){return a+r.fee;},0)/fe.length*100)/100,
+            winning_slates:winSlates.size,total_slates:slates.size,
+            win_pct:slates.size?Math.round(winSlates.size/slates.size*1000)/10:0
+          });
+        });
+        var byField={};
+        ['small','medium','large'].forEach(function(sz){
+          var fs=sz==='small'?ents.filter(function(r){return r.ce<500;}):
+                 sz==='medium'?ents.filter(function(r){return r.ce>=500&&r.ce<=5000;}):
+                 ents.filter(function(r){return r.ce>5000;});
+          var s=agg(fs); if(s) byField[sz]=s;
+        });
+        var cross={};
+        Object.keys(feeG).forEach(function(fb){
+          ['small','medium','large'].forEach(function(sz){
+            var fs=sz==='small'?feeG[fb].filter(function(r){return r.ce<500;}):
+                   sz==='medium'?feeG[fb].filter(function(r){return r.ce>=500&&r.ce<=5000;}):
+                   feeG[fb].filter(function(r){return r.ce>5000;});
+            if(fs.length){var s=agg(fs);cross[fb+'|'+sz]={count:s.count,net:s.net,roi:s.roi,top1:s.top1,top10:s.top10};}
+          });
+        });
+        nCBD[k]={total:{count:tot.count,fees:tot.fees,wins:tot.wins,net:tot.net,roi:tot.roi},
+                  by_fee:byFee,by_field:byField,cross:cross};
+      }
+    });
+
+    // Inject into globals
+    [PD,MD,FD,SD,MOD,ED,PB,CBD].forEach(function(obj){
+      Object.keys(obj).forEach(function(k){delete obj[k];});
+    });
+    Object.assign(PD,nPD); Object.assign(MD,nMD); Object.assign(FD,nFD);
+    Object.assign(SD,nSD); Object.assign(MOD,nMOD); Object.assign(ED,nED);
+    Object.assign(PB,nPB); Object.assign(CBD,nCBD);
+
+    // Update header subtitle
+    var maxDate=new Date(maxTs);
+    var sports=Object.keys(byKey).map(function(k){return k.split('|')[0];});
+    var uSports=sports.filter(function(v,i){return sports.indexOf(v)===i;}).length;
+    var sub=document.querySelector('.hsub');
+    if(sub) sub.textContent=entries.length.toLocaleString()+' entries \u00b7 '+uSports+' sports \u00b7 rake benchmarks: 1%\u21921.2% \u00b7 10%\u219212% \u00b7 20%\u219224% \u00b7 latest '+maxDate.toISOString().slice(0,10);
+
+    // Reset sport/format filters to ALL
+    SP=new Set(['ALL']); FM='ALL';
+    document.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on','on-c','on-s');});
+    document.querySelectorAll('[data-sport="ALL"],[data-fm="ALL"]').forEach(function(c){c.classList.add('on');});
+
+    // Re-render all tabs
+    render(); renderPnl(); renderPlaybook(); renderContests();
+
+    setStatus('\u2713 '+entries.length.toLocaleString()+' entries loaded \u00b7 '+Object.keys(byKey).length+' sport/format combos','up-ok');
+  }
+})();
+
+</script>
