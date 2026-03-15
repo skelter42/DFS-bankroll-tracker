@@ -2,473 +2,403 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DK Decision Center</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>DK Edge — DFS Performance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{
-  --bg:#060811;--bg2:#0b0e1a;--surf:#0f1220;--s2:#141828;--s3:#191c2e;
-  --bd:#1a1e30;--b2:#222640;--b3:#2a2e48;
-  --tx:#dde1f0;--mu:#434768;--mu2:#7278a0;
-  --gr:#05d89e;--gbg:rgba(5,216,158,.08);--gbdr:rgba(5,216,158,.25);
-  --re:#f03e5c;--rbg:rgba(240,62,92,.08);--rbdr:rgba(240,62,92,.25);
-  --am:#f0a030;--abg:rgba(240,160,48,.08);--abdr:rgba(240,160,48,.3);
-  --bl:#4d87ff;--pu:#9b6dff;
-  --c1:#f03e5c;--c10:#f0a030;--c20:#9b6dff;
+  --bg:#080a1c;--card:#0e1029;--card2:#131530;--card3:#181c38;
+  --bd:#1c2044;--b2:#242a58;--b3:#2d3568;
+  --tx:#dce0ff;--t2:#7880b8;--t3:#3d4480;
+  --gr:#00d48a;--re:#ff4560;--am:#f5a320;--bl:#4d8fff;--pu:#9b6dff;
+  --gr-bg:rgba(0,212,138,.07);--re-bg:rgba(255,69,96,.07);
+  --am-bg:rgba(245,163,32,.07);--bl-bg:rgba(77,143,255,.07);
 }
-*{margin:0;padding:0;box-sizing:border-box;}
-html,body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}header{padding:22px 32px 16px;background:var(–bg2);border-bottom:1px solid var(–bd);}
-.hrow{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;}
-.htitle{font-family:“Syne”,sans-serif;font-size:1.35rem;font-weight:800;color:#fff;}
-.htitle em{color:var(–bl);font-style:normal;}
-.hsub{font-size:0.72rem;color:var(–mu2);margin-top:3px;font-family:“IBM Plex Mono”,monospace;}
-.bpills{display:flex;gap:7px;flex-wrap:wrap;}
-.bp{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;font-family:“IBM Plex Mono”,monospace;font-size:0.68rem;border:1px solid;}
-.bp1{background:rgba(240,62,92,.1);border-color:rgba(240,62,92,.3);color:var(–c1);}
-.bp10{background:rgba(240,160,48,.1);border-color:rgba(240,160,48,.3);color:var(–c10);}
-.bp20{background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.3);color:var(–c20);}
-.bpdot{width:6px;height:6px;border-radius:50%;}
-.filters{padding:10px 32px;background:var(–surf);border-bottom:1px solid var(–bd);display:flex;flex-direction:column;gap:7px;}
-.frow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
-.flbl{font-family:“IBM Plex Mono”,monospace;font-size:0.62rem;text-transform:uppercase;letter-spacing:1.1px;color:var(–mu);white-space:nowrap;min-width:50px;}
-.chips{display:flex;gap:4px;flex-wrap:wrap;}
-.chip{font-family:“IBM Plex Mono”,monospace;font-size:0.68rem;padding:3px 9px;border-radius:3px;border:1px solid var(–b2);background:transparent;color:var(–mu2);cursor:pointer;transition:all .13s;white-space:nowrap;}
-.chip:hover{border-color:var(–bl);color:var(–tx);}
-.chip.on{background:rgba(5,216,158,.1);border-color:rgba(5,216,158,.3);color:var(–gr);}
-.chip.on-c{background:rgba(77,135,255,.1);border-color:rgba(77,135,255,.3);color:var(–bl);}
-.chip.on-s{background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.3);color:var(–pu);}
-.tabs{display:flex;background:var(–surf);border-bottom:1px solid var(–bd);padding:0 32px;overflow-x:auto;}
-.tab{font-family:“IBM Plex Mono”,monospace;font-size:0.72rem;padding:11px 18px;cursor:pointer;color:var(–mu2);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;}
-.tab:hover{color:var(–tx);}
-.tab.active{color:var(–bl);border-bottom-color:var(–bl);}
-.main{padding:20px 32px;display:flex;flex-direction:column;gap:16px;}
-.tc{display:none;flex-direction:column;gap:16px;}
-.tc.active{display:flex;}
-.panel{background:var(–surf);border:1px solid var(–bd);border-radius:10px;overflow:hidden;}
-.ph{padding:12px 18px;border-bottom:1px solid var(–bd);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
-.pt{font-family:“IBM Plex Mono”,monospace;font-size:0.8rem;font-weight:600;color:#fff;}
-.ps{font-size:0.7rem;color:var(–mu2);font-family:“IBM Plex Mono”,monospace;margin-top:2px;}
-.pb{padding:18px;}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-.ch300{position:relative;height:300px;}
-.ch360{position:relative;height:360px;}
-.ch240{position:relative;height:240px;}
-.tcards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-.tcard{background:var(–surf);border:1px solid var(–bd);border-radius:8px;padding:12px 14px;position:relative;overflow:hidden;}
-.tcard::before{content:””;position:absolute;top:0;left:0;right:0;height:2px;}
-.tct1::before{background:var(–c1);}
-.tct10::before{background:var(–c10);}
-.tct20::before{background:var(–c20);}
-.tch{display:flex;justify-content:space-between;margin-bottom:9px;}
-.tcl{font-family:“IBM Plex Mono”,monospace;font-size:0.62rem;text-transform:uppercase;letter-spacing:.8px;color:var(–mu2);}
-.tcb{font-family:“IBM Plex Mono”,monospace;font-size:0.6rem;color:var(–mu);}
-.tcw{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;}
-.twi{text-align:center;padding:3px 1px;}
-.twl{font-family:“IBM Plex Mono”,monospace;font-size:0.55rem;color:var(–mu);text-transform:uppercase;margin-bottom:2px;}
-.twv{font-family:“IBM Plex Mono”,monospace;font-size:0.82rem;font-weight:600;}
-.twa{font-family:“IBM Plex Mono”,monospace;font-size:0.58rem;margin-top:1px;}
-.twi.now{background:rgba(255,255,255,.03);border-radius:3px;}
-.twi.now .twv{font-size:0.95rem;}
-.ptog{display:flex;border:1px solid var(–b2);border-radius:4px;overflow:hidden;}
-.ptb{font-family:“IBM Plex Mono”,monospace;font-size:0.66rem;padding:4px 10px;background:transparent;color:var(–mu2);cursor:pointer;border:none;border-right:1px solid var(–b2);transition:all .13s;}
-.ptb:last-child{border-right:none;}
-.ptb:hover{background:var(–s2);color:var(–tx);}
-.ptb.active{background:rgba(77,135,255,.15);color:var(–bl);}
-/* EDGE LIST */
-.elist{display:flex;flex-direction:column;}
-.erow{display:grid;grid-template-columns:1fr 130px 52px 52px 52px 90px 90px;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(–bd);transition:background .12s;}
-.erow:last-child{border-bottom:none;}
-.erow:hover{background:var(–s2);}
-.erow.ehdr{border-bottom:2px solid var(–b2);padding:6px 14px;}
-.eh{font-family:“IBM Plex Mono”,monospace;font-size:0.58rem;text-transform:uppercase;letter-spacing:.8px;color:var(–mu);}
-.ename{display:flex;align-items:center;gap:6px;}
-.stag{font-family:“IBM Plex Mono”,monospace;font-size:0.66rem;font-weight:600;padding:2px 6px;border-radius:3px;background:rgba(77,135,255,.1);border:1px solid rgba(77,135,255,.2);color:var(–bl);}
-.ftag{font-family:“IBM Plex Mono”,monospace;font-size:0.6rem;padding:2px 5px;border-radius:2px;}
-.fc{background:rgba(77,135,255,.08);border:1px solid rgba(77,135,255,.15);color:var(–bl);}
-.fs{background:rgba(155,109,255,.08);border:1px solid rgba(155,109,255,.15);color:var(–pu);}
-.fb{background:rgba(5,216,158,.08);border:1px solid rgba(5,216,158,.15);color:var(–gr);}
-.sbwrap{width:100%;height:6px;background:var(–b2);border-radius:3px;overflow:hidden;}
-.sbar{height:100%;border-radius:3px;}
-.snum{font-family:“IBM Plex Mono”,monospace;font-size:0.75rem;font-weight:600;min-width:26px;text-align:right;}
-.ach{font-family:“IBM Plex Mono”,monospace;font-size:0.62rem;padding:2px 8px;border-radius:3px;font-weight:600;white-space:nowrap;}
-.ac-scale{background:rgba(5,216,158,.12);color:var(–gr);border:1px solid rgba(5,216,158,.3);}
-.ac-watch{background:rgba(240,160,48,.1);color:var(–am);border:1px solid rgba(240,160,48,.25);}
-.ac-turn{background:rgba(77,135,255,.1);color:var(–bl);border:1px solid rgba(77,135,255,.25);}
-.ac-exit{background:rgba(43,47,80,.5);color:var(–mu2);border:1px solid var(–b2);}
-.tc-chip{font-family:“IBM Plex Mono”,monospace;font-size:0.62rem;white-space:nowrap;}
-/* QUADRANT LEGEND */
-.qleg{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px;}
-.qli{display:flex;align-items:center;gap:6px;font-family:“IBM Plex Mono”,monospace;font-size:0.65rem;}
-.qld{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-/* TABLES */
-.bt{width:100%;border-collapse:collapse;font-size:0.76rem;}
-.bt thead tr{border-bottom:2px solid var(–b2);}
-.bt th{padding:7px 10px;text-align:left;font-family:“IBM Plex Mono”,monospace;font-size:0.59rem;text-transform:uppercase;letter-spacing:.7px;color:var(–mu);white-space:nowrap;}
-.bt td{padding:8px 10px;border-bottom:1px solid var(–bd);vertical-align:middle;}
-.bt tr:last-child td{border-bottom:none;}
-.bt tr:hover td{background:var(–s2);}
-.npos{color:var(–gr);font-family:“IBM Plex Mono”,monospace;font-size:0.72rem;font-weight:500;}
-.nneg{color:var(–re);font-family:“IBM Plex Mono”,monospace;font-size:0.72rem;font-weight:500;}
-.nmut{color:var(–mu2);font-family:“IBM Plex Mono”,monospace;font-size:0.7rem;}
-.wg{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;min-width:190px;}
-.wci{text-align:center;padding:2px 0;}
-.wcl{font-family:“IBM Plex Mono”,monospace;font-size:0.53rem;color:var(–mu);text-transform:uppercase;}
-.wcv{font-family:“IBM Plex Mono”,monospace;font-size:0.7rem;font-weight:600;}
-.wcd{font-family:“IBM Plex Mono”,monospace;font-size:0.53rem;margin-top:1px;}
-.wci.wcn{background:var(–s2);border-radius:2px;}
-.sig{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:2px;font-size:0.56rem;font-weight:700;}
-.sg{background:var(–gbg);color:var(–gr);border:1px solid var(–gbdr);}
-.sr{background:var(–rbg);color:var(–re);border:1px solid var(–rbdr);}
-.sa{background:var(–abg);color:var(–am);border:1px solid var(–abdr);}
-.sn{background:var(–s2);color:var(–mu2);border:1px solid var(–b2);}
-.blbl{font-family:“IBM Plex Mono”,monospace;font-size:0.66rem;padding:2px 7px;border-radius:3px;font-weight:500;}
-.bsm{background:rgba(5,216,158,.08);color:var(–gr);border:1px solid rgba(5,216,158,.18);}
-.bmd{background:rgba(77,135,255,.08);color:var(–bl);border:1px solid rgba(77,135,255,.18);}
-.blg{background:rgba(155,109,255,.08);color:var(–pu);border:1px solid rgba(155,109,255,.18);}
-.bpn{background:rgba(240,62,92,.08);color:var(–re);border:1px solid rgba(240,62,92,.18);}
-.ibox{background:rgba(77,135,255,.06);border:1px solid rgba(77,135,255,.2);border-radius:8px;padding:14px 16px;font-size:0.79rem;line-height:1.6;}
-.ibox strong{color:var(–bl);}
-.nodata{padding:32px;text-align:center;color:var(–mu);font-family:“IBM Plex Mono”,monospace;font-size:0.75rem;}
-.up{color:var(–gr);}
-.dn{color:var(–re);}
-.fl{color:var(–mu2);}
-.na{color:var(–mu);}
-@media(max-width:900px){
-header,.filters,.tabs,.main{padding-left:16px;padding-right:16px;}
-.tcards,.g2{grid-template-columns:1fr;}
-.wg{grid-template-columns:repeat(2,1fr);}
-.erow{grid-template-columns:1fr 80px;}
-}
-/* ── PLAYBOOK ──────────────────────────────────────────── /
-.pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
-.pb-card{background:var(–surf);border:1px solid var(–bd);border-radius:10px;overflow:hidden;transition:transform .15s,box-shadow .15s;}
-.pb-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.35);}
-.pb-card-top{padding:14px 16px 12px;position:relative;}
-.pb-card-top::before{content:””;position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0;}
-.pbt-up .pb-card-top::before{background:linear-gradient(90deg,var(–gr),rgba(5,216,158,.4));}
-.pbt-hold .pb-card-top::before{background:linear-gradient(90deg,var(–bl),rgba(77,135,255,.4));}
-.pbt-dn .pb-card-top::before{background:linear-gradient(90deg,var(–am),rgba(240,160,48,.4));}
-.pbt-out .pb-card-top::before{background:linear-gradient(90deg,var(–re),rgba(240,62,92,.4));}
-.pbt-none .pb-card-top::before{background:var(–b2);}
-.pb-sport-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.pb-sport-name{font-family:“Syne”,sans-serif;font-size:1.1rem;font-weight:800;color:#fff;letter-spacing:-.3px;}
-.pb-conf{font-family:“IBM Plex Mono”,monospace;font-size:0.6rem;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.8px;}
-.conf-high{background:rgba(5,216,158,.1);color:var(–gr);border:1px solid rgba(5,216,158,.2);}
-.conf-med{background:rgba(240,160,48,.1);color:var(–am);border:1px solid rgba(240,160,48,.2);}
-.conf-low{background:rgba(77,135,255,.1);color:var(–bl);border:1px solid rgba(77,135,255,.2);}
-.conf-ins{background:var(–s2);color:var(–mu2);border:1px solid var(–b2);}
-.pb-rec-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
-.pb-rec-icon{font-size:1.6rem;line-height:1;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0;}
-.ri-up{background:rgba(5,216,158,.12);color:var(–gr);}
-.ri-hold{background:rgba(77,135,255,.12);color:var(–bl);}
-.ri-dn{background:rgba(240,160,48,.12);color:var(–am);}
-.ri-out{background:rgba(240,62,92,.12);color:var(–re);}
-.ri-none{background:var(–s2);color:var(–mu);}
-.pb-rec-label{font-family:“Syne”,sans-serif;font-size:1.25rem;font-weight:800;letter-spacing:-.3px;}
-.rl-up{color:var(–gr);}
-.rl-hold{color:var(–bl);}
-.rl-dn{color:var(–am);}
-.rl-out{color:var(–re);}
-.rl-none{color:var(–mu);}
-.pb-reason{font-size:0.74rem;color:var(–mu2);line-height:1.4;margin-bottom:12px;}
-.pb-signals{display:flex;flex-direction:column;gap:4px;padding:12px 16px;background:var(–s2);border-top:1px solid var(–bd);}
-.pb-sig-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.pb-sig-label{font-family:“IBM Plex Mono”,monospace;font-size:0.62rem;color:var(–mu2);text-transform:uppercase;letter-spacing:.6px;}
-.pb-sig-val{font-family:“IBM Plex Mono”,monospace;font-size:0.7rem;font-weight:600;display:flex;align-items:center;gap:5px;}
-.pb-bench-pills{display:flex;gap:4px;flex-wrap:wrap;}
-.pb-bench-pill{font-family:“IBM Plex Mono”,monospace;font-size:0.6rem;padding:1px 6px;border-radius:3px;}
-.pbp-ok{background:rgba(5,216,158,.1);color:var(–gr);border:1px solid rgba(5,216,158,.2);}
-.pbp-warn{background:rgba(240,160,48,.1);color:var(–am);border:1px solid rgba(240,160,48,.2);}
-.pbp-fail{background:rgba(240,62,92,.1);color:var(–re);border:1px solid rgba(240,62,92,.2);}
-.pb-divider{height:1px;background:var(–bd);margin:4px 0;}
-/ exposure dial /
-.pb-exposure{display:flex;align-items:center;gap:8px;}
-.exp-track{flex:1;height:8px;background:var(–b2);border-radius:4px;overflow:hidden;position:relative;}
-.exp-fill{height:100%;border-radius:4px;transition:width .4s ease;}
-.exp-label{font-family:“IBM Plex Mono”,monospace;font-size:0.62rem;color:var(–mu2);white-space:nowrap;}
-/ summary row above grid */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}
+button{font-family:inherit;cursor:pointer;}
+/* HEADER */
+.app-header{padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:baseline;gap:8px;}
+.logo-name{font-family:"Syne",sans-serif;font-size:1.1rem;font-weight:800;color:#fff;letter-spacing:-.5px;}
+.logo-sub{font-family:"IBM Plex Mono",monospace;font-size:.63rem;color:var(--t2);}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.bench-pills{display:flex;gap:5px;}
+.bp{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:4px;font-family:"IBM Plex Mono",monospace;font-size:.63rem;border:1px solid;}
+.bp-t1{background:rgba(255,69,96,.08);border-color:rgba(255,69,96,.3);color:var(--re);}
+.bp-t10{background:rgba(245,163,32,.08);border-color:rgba(245,163,32,.3);color:var(--am);}
+.bp-t20{background:rgba(155,109,255,.08);border-color:rgba(155,109,255,.3);color:var(--pu);}
+.bpdot{width:5px;height:5px;border-radius:50%;}
+.btn-upload{display:flex;align-items:center;gap:6px;padding:7px 15px;border-radius:6px;border:1px solid rgba(77,143,255,.4);background:rgba(77,143,255,.09);color:var(--bl);font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:600;transition:all .15s;}
+.btn-upload:hover{background:rgba(77,143,255,.18);border-color:rgba(77,143,255,.7);}
+/* NAV */
+.app-nav{display:flex;background:var(--card);border-bottom:1px solid var(--bd);padding:0 32px;overflow-x:auto;}
+.nav-tab{padding:13px 20px;font-size:.88rem;font-weight:500;color:var(--t2);border-bottom:2px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap;user-select:none;}
+.nav-tab:hover{color:var(--tx);}
+.nav-tab.active{color:var(--bl);border-bottom-color:var(--bl);font-weight:600;}
+/* MAIN */
+.app-main{padding:24px 32px;max-width:1440px;margin:0 auto;}
+.tab-panel{display:none;flex-direction:column;gap:20px;}
+.tab-panel.active{display:flex;}
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:220px 1fr 1fr 1fr;gap:14px;}
+.kpi-card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;}
+.kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;}
+.kpi-score::before{background:linear-gradient(90deg,var(--bl),var(--pu));}
+.kpi-pos::before{background:var(--gr);}
+.kpi-neg::before{background:var(--re);}
+.kpi-neu::before{background:var(--bl);}
+.kpi-label{font-family:"IBM Plex Mono",monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:1px;color:var(--t2);margin-bottom:8px;}
+.kpi-value{font-family:"Syne",sans-serif;font-size:1.85rem;font-weight:800;line-height:1;}
+.kpi-sub{font-family:"IBM Plex Mono",monospace;font-size:.61rem;color:var(--t3);margin-top:6px;}
+/* SCORE RING */
+.score-wrap{display:flex;align-items:center;gap:14px;}
+.score-ring{position:relative;width:70px;height:70px;flex-shrink:0;}
+.score-ring svg{transform:rotate(-90deg);}
+.score-ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-num{font-family:"Syne",sans-serif;font-size:1.2rem;font-weight:800;line-height:1;}
+.score-den{font-family:"IBM Plex Mono",monospace;font-size:.48rem;color:var(--t2);}
+.score-meta{flex:1;}
+.score-lbl{font-family:"IBM Plex Mono",monospace;font-size:.58rem;text-transform:uppercase;letter-spacing:.8px;color:var(--t2);}
+.score-title{font-family:"Syne",sans-serif;font-size:.95rem;font-weight:800;margin-top:3px;}
+/* FINISH RATES */
+.panel{background:var(--card);border:1px solid var(--bd);border-radius:12px;overflow:hidden;}
+.panel-hdr{padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.panel-title{font-size:.9rem;font-weight:600;color:var(--tx);}
+.panel-sub{font-family:"IBM Plex Mono",monospace;font-size:.61rem;color:var(--t2);margin-top:2px;}
+.panel-body{padding:20px 22px;}
+.fr-rows{display:flex;flex-direction:column;gap:14px;}
+.fr-row{display:flex;align-items:center;gap:14px;}
+.fr-lbl{font-family:"IBM Plex Mono",monospace;font-size:.68rem;font-weight:600;width:58px;flex-shrink:0;}
+.fr-track{flex:1;height:10px;background:var(--card2);border-radius:5px;overflow:visible;position:relative;}
+.fr-fill{height:100%;border-radius:5px;transition:width .5s ease;}
+.fr-tick{position:absolute;top:-3px;width:2px;height:16px;background:var(--t3);border-radius:1px;}
+.fr-val{font-family:"IBM Plex Mono",monospace;font-size:.76rem;font-weight:600;width:46px;text-align:right;flex-shrink:0;}
+.fr-delta{font-family:"IBM Plex Mono",monospace;font-size:.66rem;width:60px;text-align:right;flex-shrink:0;}
+/* PLAYBOOK */
+.section-hdr{margin-bottom:14px;}
+.section-title{font-size:.95rem;font-weight:600;}
+.section-sub{font-family:"IBM Plex Mono",monospace;font-size:.61rem;color:var(--t2);margin-top:3px;}
 .pb-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
-.pbs-card{border-radius:8px;padding:12px 14px;border:1px solid;text-align:center;}
-.pbs-up{background:rgba(5,216,158,.06);border-color:rgba(5,216,158,.2);}
-.pbs-hold{background:rgba(77,135,255,.06);border-color:rgba(77,135,255,.2);}
-.pbs-dn{background:rgba(240,160,48,.06);border-color:rgba(240,160,48,.2);}
-.pbs-out{background:rgba(240,62,92,.06);border-color:rgba(240,62,92,.2);}
-.pbs-num{font-family:“Syne”,sans-serif;font-size:1.6rem;font-weight:800;line-height:1;}
-.pbs-lbl{font-family:“IBM Plex Mono”,monospace;font-size:0.62rem;text-transform:uppercase;letter-spacing:.8px;margin-top:4px;}
-.pbs-up .pbs-num,.pbs-up .pbs-lbl{color:var(–gr);}
-.pbs-hold .pbs-num,.pbs-hold .pbs-lbl{color:var(–bl);}
-.pbs-dn .pbs-num,.pbs-dn .pbs-lbl{color:var(–am);}
-.pbs-out .pbs-num,.pbs-out .pbs-lbl{color:var(–re);}
-.pb-sort-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
-.pb-sort-lbl{font-family:“IBM Plex Mono”,monospace;font-size:0.62rem;color:var(–mu);text-transform:uppercase;letter-spacing:.8px;}
-/* ── P&L TAB ─────────────────────────────────────────── */
-.pnl-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
-.pnl-sc{background:var(–surf);border:1px solid var(–bd);border-radius:8px;padding:14px 16px;}
-.pnl-sc-lbl{font-family:“IBM Plex Mono”,monospace;font-size:0.62rem;text-transform:uppercase;letter-spacing:.8px;color:var(–mu2);margin-bottom:6px;}
-.pnl-sc-val{font-family:“Syne”,sans-serif;font-size:1.5rem;font-weight:800;line-height:1;}
-.pnl-sc-sub{font-family:“IBM Plex Mono”,monospace;font-size:0.65rem;color:var(–mu2);margin-top:4px;}
-.pnl-view-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
-.pnl-tbl{width:100%;border-collapse:collapse;font-size:.78rem;}
-.pnl-tbl thead tr{border-bottom:2px solid var(–b2);}
-.pnl-tbl th{padding:8px 12px;text-align:left;font-family:“IBM Plex Mono”,monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.7px;color:var(–mu);white-space:nowrap;cursor:pointer;user-select:none;}
-.pnl-tbl th:hover{color:var(–tx);}
-.pnl-tbl th.sorted{color:var(–bl);}
-.pnl-tbl td{padding:9px 12px;border-bottom:1px solid var(–bd);vertical-align:middle;}
+.pbs{border-radius:8px;padding:12px 14px;border:1px solid;text-align:center;}
+.pbs-inc{background:var(--gr-bg);border-color:rgba(0,212,138,.25);}
+.pbs-mnt{background:var(--bl-bg);border-color:rgba(77,143,255,.25);}
+.pbs-red{background:var(--am-bg);border-color:rgba(245,163,32,.25);}
+.pbs-out{background:var(--re-bg);border-color:rgba(255,69,96,.25);}
+.pbs-num{font-family:"Syne",sans-serif;font-size:1.5rem;font-weight:800;line-height:1;}
+.pbs-lbl{font-family:"IBM Plex Mono",monospace;font-size:.57rem;text-transform:uppercase;letter-spacing:.8px;margin-top:3px;}
+.pbs-inc .pbs-num,.pbs-inc .pbs-lbl{color:var(--gr);}
+.pbs-mnt .pbs-num,.pbs-mnt .pbs-lbl{color:var(--bl);}
+.pbs-red .pbs-num,.pbs-red .pbs-lbl{color:var(--am);}
+.pbs-out .pbs-num,.pbs-out .pbs-lbl{color:var(--re);}
+.pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:12px;}
+.pb-card{background:var(--card);border:1px solid var(--bd);border-radius:10px;overflow:hidden;transition:transform .15s,box-shadow .15s;}
+.pb-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.3);}
+.pb-card-top{padding:14px 16px 12px;position:relative;}
+.pb-card-top::after{content:"";position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0;}
+.pb-inc .pb-card-top::after{background:linear-gradient(90deg,#00d48a,rgba(0,212,138,.2));}
+.pb-mnt .pb-card-top::after{background:linear-gradient(90deg,#4d8fff,rgba(77,143,255,.2));}
+.pb-red .pb-card-top::after{background:linear-gradient(90deg,#f5a320,rgba(245,163,32,.2));}
+.pb-out .pb-card-top::after{background:linear-gradient(90deg,#ff4560,rgba(255,69,96,.2));}
+.pb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.pb-sport{font-family:"Syne",sans-serif;font-size:1rem;font-weight:800;color:#fff;}
+.f-tag{font-family:"IBM Plex Mono",monospace;font-size:.58rem;padding:2px 5px;border-radius:2px;}
+.fmt-c{background:rgba(77,143,255,.1);color:var(--bl);border:1px solid rgba(77,143,255,.2);}
+.fmt-s{background:rgba(155,109,255,.1);color:var(--pu);border:1px solid rgba(155,109,255,.2);}
+.fmt-b{background:rgba(0,212,138,.1);color:var(--gr);border:1px solid rgba(0,212,138,.2);}
+.pb-rec-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.pb-icon{font-size:1.4rem;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:7px;flex-shrink:0;}
+.pi-inc{background:rgba(0,212,138,.1);}
+.pi-mnt{background:rgba(77,143,255,.1);}
+.pi-red{background:rgba(245,163,32,.1);}
+.pi-out{background:rgba(255,69,96,.1);}
+.pb-rec{font-family:"Syne",sans-serif;font-size:1.05rem;font-weight:800;}
+.pr-inc{color:var(--gr);}
+.pr-mnt{color:var(--bl);}
+.pr-red{color:var(--am);}
+.pr-out{color:var(--re);}
+.pb-reason{font-size:.76rem;color:var(--t2);line-height:1.45;margin-bottom:10px;}
+.fp-pills{display:flex;gap:4px;flex-wrap:wrap;}
+.fp{font-family:"IBM Plex Mono",monospace;font-size:.58rem;padding:1px 5px;border-radius:3px;}
+.fp-ok{background:rgba(0,212,138,.1);color:var(--gr);border:1px solid rgba(0,212,138,.2);}
+.fp-warn{background:rgba(245,163,32,.1);color:var(--am);border:1px solid rgba(245,163,32,.2);}
+.fp-bad{background:rgba(255,69,96,.1);color:var(--re);border:1px solid rgba(255,69,96,.2);}
+.pb-stats{display:flex;flex-direction:column;gap:5px;padding:11px 16px;background:var(--card2);border-top:1px solid var(--bd);}
+.pb-stat{display:flex;align-items:center;justify-content:space-between;}
+.pb-stat-lbl{font-family:"IBM Plex Mono",monospace;font-size:.58rem;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;}
+.pb-stat-val{font-family:"IBM Plex Mono",monospace;font-size:.66rem;font-weight:600;}
+.conf-tag{font-family:"IBM Plex Mono",monospace;font-size:.57rem;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.6px;}
+.ct-high{background:rgba(0,212,138,.1);color:var(--gr);border:1px solid rgba(0,212,138,.2);}
+.ct-med{background:rgba(245,163,32,.1);color:var(--am);border:1px solid rgba(245,163,32,.2);}
+.ct-low{background:rgba(77,143,255,.1);color:var(--bl);border:1px solid rgba(77,143,255,.2);}
+.ct-ins{background:var(--card2);color:var(--t2);border:1px solid var(--bd);}
+/* FILTERS */
+.filters-bar{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 18px;display:flex;flex-direction:column;gap:10px;}
+.filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.filter-lbl{font-family:"IBM Plex Mono",monospace;font-size:.59rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);min-width:58px;}
+.chips{display:flex;gap:4px;flex-wrap:wrap;}
+.chip{font-family:"IBM Plex Mono",monospace;font-size:.64rem;padding:3px 9px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--t2);cursor:pointer;transition:all .12s;white-space:nowrap;}
+.chip:hover{border-color:var(--bl);color:var(--tx);}
+.chip.on{background:rgba(0,212,138,.09);border-color:rgba(0,212,138,.3);color:var(--gr);}
+.chip.on-c{background:rgba(77,143,255,.09);border-color:rgba(77,143,255,.3);color:var(--bl);}
+.chip.on-s{background:rgba(155,109,255,.09);border-color:rgba(155,109,255,.3);color:var(--pu);}
+.win-toggle{display:flex;border:1px solid var(--bd);border-radius:5px;overflow:hidden;}
+.win-btn{font-family:"IBM Plex Mono",monospace;font-size:.63rem;padding:4px 11px;background:transparent;color:var(--t2);border:none;border-right:1px solid var(--bd);cursor:pointer;transition:all .12s;}
+.win-btn:last-child{border-right:none;}
+.win-btn:hover{background:var(--card2);color:var(--tx);}
+.win-btn.active{background:rgba(77,143,255,.15);color:var(--bl);}
+/* PERF TABLE */
+.tbl-panel{background:var(--card);border:1px solid var(--bd);border-radius:12px;overflow:hidden;}
+.tbl-hdr{padding:15px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.tbl-title{font-size:.88rem;font-weight:600;}
+.tbl-sub{font-family:"IBM Plex Mono",monospace;font-size:.6rem;color:var(--t2);margin-top:2px;}
+.perf-tbl{width:100%;border-collapse:collapse;}
+.perf-tbl thead tr{border-bottom:2px solid var(--b2);}
+.perf-tbl th{padding:8px 14px;text-align:left;font-family:"IBM Plex Mono",monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.7px;color:var(--t3);white-space:nowrap;}
+.perf-tbl th.r{text-align:right;}
+.perf-tbl td{padding:10px 14px;border-bottom:1px solid var(--bd);vertical-align:middle;}
+.perf-tbl tr:last-child td{border-bottom:none;}
+.perf-tbl tr:hover td{background:rgba(255,255,255,.018);}
+.s-cell{display:flex;align-items:center;gap:6px;}
+.s-tag{font-family:"IBM Plex Mono",monospace;font-size:.62rem;font-weight:600;padding:2px 6px;border-radius:3px;background:rgba(77,143,255,.09);border:1px solid rgba(77,143,255,.2);color:var(--bl);}
+.no-data{padding:36px;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:.73rem;color:var(--t3);}
+.v-pos{font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:500;color:var(--gr);}
+.v-neg{font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:500;color:var(--re);}
+.v-mut{font-family:"IBM Plex Mono",monospace;font-size:.68rem;color:var(--t2);}
+.fr-mini-rows{display:flex;flex-direction:column;gap:3px;min-width:130px;}
+.fr-mini{display:flex;align-items:center;gap:5px;}
+.fr-mini-lbl{font-family:"IBM Plex Mono",monospace;font-size:.55rem;color:var(--t3);width:26px;}
+.fr-mini-track{flex:1;height:5px;background:var(--card2);border-radius:3px;overflow:hidden;}
+.fr-mini-fill{height:100%;border-radius:3px;}
+.fr-mini-val{font-family:"IBM Plex Mono",monospace;font-size:.61rem;font-weight:500;min-width:34px;text-align:right;}
+.score-badge{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:7px;font-family:"IBM Plex Mono",monospace;font-size:.76rem;font-weight:600;border:1px solid;}
+.sb-hi{background:rgba(0,212,138,.1);color:var(--gr);border-color:rgba(0,212,138,.25);}
+.sb-md{background:rgba(77,143,255,.1);color:var(--bl);border-color:rgba(77,143,255,.25);}
+.sb-lo{background:rgba(245,163,32,.1);color:var(--am);border-color:rgba(245,163,32,.25);}
+.sb-vl{background:rgba(255,69,96,.1);color:var(--re);border-color:rgba(255,69,96,.25);}
+/* SUB TABLES */
+.sub-tables{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.blbl{font-family:"IBM Plex Mono",monospace;font-size:.62rem;padding:2px 6px;border-radius:3px;font-weight:500;}
+.blbl-sm{background:rgba(0,212,138,.08);color:var(--gr);border:1px solid rgba(0,212,138,.2);}
+.blbl-md{background:rgba(77,143,255,.08);color:var(--bl);border:1px solid rgba(77,143,255,.2);}
+.blbl-lg{background:rgba(155,109,255,.08);color:var(--pu);border:1px solid rgba(155,109,255,.2);}
+.blbl-pn{background:rgba(0,212,138,.08);color:var(--gr);border:1px solid rgba(0,212,138,.2);}
+.blbl-lo{background:rgba(77,143,255,.08);color:var(--bl);border:1px solid rgba(77,143,255,.2);}
+.blbl-mi{background:rgba(155,109,255,.08);color:var(--pu);border:1px solid rgba(155,109,255,.2);}
+.blbl-hi{background:rgba(255,69,96,.08);color:var(--re);border:1px solid rgba(255,69,96,.2);}
+/* CHARTS */
+.chart-panel{background:var(--card);border:1px solid var(--bd);border-radius:12px;overflow:hidden;}
+.chart-hdr{padding:15px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.chart-body{padding:20px;}
+.ch300{position:relative;height:300px;}
+.ch340{position:relative;height:340px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.ql{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:12px;}
+.ql-item{display:flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",monospace;font-size:.62rem;color:var(--t2);}
+.ql-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+/* PNL */
+.pnl-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.pnl-tbl{width:100%;border-collapse:collapse;}
+.pnl-tbl thead tr{border-bottom:2px solid var(--b2);}
+.pnl-tbl th{padding:8px 14px;text-align:left;font-family:"IBM Plex Mono",monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.7px;color:var(--t3);white-space:nowrap;cursor:pointer;user-select:none;}
+.pnl-tbl th:hover{color:var(--tx);}
+.pnl-tbl th.r{text-align:right;}
+.pnl-tbl td{padding:9px 14px;border-bottom:1px solid var(--bd);vertical-align:middle;}
 .pnl-tbl tr:last-child td{border-bottom:none;}
-.pnl-tbl tr:hover td{background:var(–s2);}
-.pnl-tbl tr.total-row td{border-top:2px solid var(–b2);background:var(–s2);font-weight:600;}
-.bar-cell{display:flex;align-items:center;gap:8px;}
-.bar-wrap{width:90px;height:8px;background:var(–b2);border-radius:4px;overflow:hidden;flex-shrink:0;}
+.pnl-tbl tr:hover td{background:rgba(255,255,255,.018);}
+.pnl-tbl tr.total-row td{border-top:2px solid var(--b2);background:var(--card2);font-weight:600;}
+.bar-cell{display:flex;align-items:center;justify-content:flex-end;gap:7px;}
+.bar-wrap{width:68px;height:7px;background:var(--card2);border-radius:4px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:4px;}
-.roi-val{font-family:“IBM Plex Mono”,monospace;font-size:.72rem;font-weight:600;min-width:52px;}
-.net-val{font-family:“IBM Plex Mono”,monospace;font-size:.75rem;font-weight:600;}
-.entries-val{font-family:“IBM Plex Mono”,monospace;font-size:.72rem;color:var(–mu2);}
-.money-val{font-family:“IBM Plex Mono”,monospace;font-size:.72rem;color:var(–mu2);}
-/* ── CONTEST BREAKDOWN ───────────────────────────── */
-.cb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
-.cb-card{background:var(–surf);border:1px solid var(–bd);border-radius:10px;overflow:hidden;}
-.cb-card-hdr{padding:12px 16px 10px;border-bottom:1px solid var(–bd);display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.cb-sport{display:flex;align-items:center;gap:7px;}
-.cb-total{text-align:right;}
-.cb-total-net{font-family:“IBM Plex Mono”,monospace;font-size:.82rem;font-weight:600;}
-.cb-total-roi{font-family:“IBM Plex Mono”,monospace;font-size:.63rem;color:var(–mu2);}
-.cb-rows{width:100%;border-collapse:collapse;}
-.cb-rows th{padding:5px 10px;font-family:“IBM Plex Mono”,monospace;font-size:.57rem;text-transform:uppercase;letter-spacing:.7px;color:var(–mu);text-align:right;white-space:nowrap;background:var(–s2);}
-.cb-rows th:first-child{text-align:left;}
-.cb-rows td{padding:6px 10px;border-bottom:1px solid var(–bd);font-family:“IBM Plex Mono”,monospace;font-size:.68rem;text-align:right;vertical-align:middle;white-space:nowrap;}
-.cb-rows td:first-child{text-align:left;}
-.cb-rows tr:last-child td{border-bottom:none;}
-.cb-rows tr:hover td{background:var(–s2);}
-.cb-rows tr.best-row td{background:rgba(5,216,158,.05);}
-.cb-fee{font-size:.7rem;font-weight:600;color:var(–tx);}
-.cb-roi-bar{display:flex;align-items:center;gap:5px;}
-.cb-roi-track{width:50px;height:5px;background:var(–b2);border-radius:3px;overflow:hidden;flex-shrink:0;}
-.cb-roi-fill{height:100%;border-radius:3px;}
-.cb-winpct{font-size:.63rem;color:var(–mu2);}
-.cb-best-badge{display:inline-block;font-family:“IBM Plex Mono”,monospace;font-size:.55rem;padding:1px 5px;border-radius:2px;background:rgba(5,216,158,.12);color:var(–gr);border:1px solid rgba(5,216,158,.2);margin-left:4px;vertical-align:middle;}
-.cb-filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
-.cb-sort-lbl{font-family:”IBM Plex Mono”,monospace;font-size:.62rem;color:var(–mu);text-transform:uppercase;letter-spacing:.8px;}
-.csv-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:5px;border:1px solid rgba(77,135,255,.35);background:rgba(77,135,255,.08);color:var(--bl);font-family:”IBM Plex Mono”,monospace;font-size:0.72rem;cursor:pointer;transition:all .15s;}
-.csv-btn:hover{background:rgba(77,135,255,.16);border-color:rgba(77,135,255,.6);}
-.csv-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center;}
+/* CSV MODAL */
+.csv-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;}
 .csv-overlay.open{display:flex;}
-.csv-modal{background:var(--surf);border:1px solid var(--b2);border-radius:12px;padding:28px;max-width:520px;width:90%;display:flex;flex-direction:column;gap:16px;}
-.csv-modal h2{font-family:”Syne”,sans-serif;font-size:1.1rem;font-weight:800;color:#fff;}
-.csv-drop{border:2px dashed var(--b3);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .15s;}
-.csv-drop:hover,.csv-drop.drag{border-color:var(--bl);background:rgba(77,135,255,.05);}
+.csv-modal{background:var(--card);border:1px solid var(--b2);border-radius:14px;padding:28px;max-width:520px;width:90%;display:flex;flex-direction:column;gap:16px;}
+.csv-modal-title{font-family:"Syne",sans-serif;font-size:1.1rem;font-weight:800;color:#fff;}
+.csv-drop{border:2px dashed var(--b2);border-radius:10px;padding:34px;text-align:center;cursor:pointer;transition:all .15s;}
+.csv-drop:hover,.csv-drop.drag{border-color:var(--bl);background:rgba(77,143,255,.05);}
 .csv-drop-icon{font-size:2rem;margin-bottom:8px;}
-.csv-drop-lbl{font-family:”IBM Plex Mono”,monospace;font-size:0.75rem;color:var(--mu2);}
-.csv-drop-sub{font-family:”IBM Plex Mono”,monospace;font-size:0.62rem;color:var(--mu);margin-top:5px;}
-.csv-info{background:var(--s2);border-radius:6px;padding:12px 14px;font-family:”IBM Plex Mono”,monospace;font-size:0.65rem;color:var(--mu2);line-height:1.7;}
+.csv-drop-main{font-family:"IBM Plex Mono",monospace;font-size:.76rem;color:var(--t2);}
+.csv-drop-sub{font-family:"IBM Plex Mono",monospace;font-size:.62rem;color:var(--t3);margin-top:4px;}
+.csv-info{background:var(--card2);border-radius:7px;padding:12px 14px;font-family:"IBM Plex Mono",monospace;font-size:.62rem;color:var(--t2);line-height:1.7;}
 .csv-info strong{color:var(--bl);}
-.csv-status{font-family:”IBM Plex Mono”,monospace;font-size:0.72rem;padding:8px 12px;border-radius:5px;display:none;}
-.csv-status.ok{background:rgba(5,216,158,.1);color:var(--gr);border:1px solid rgba(5,216,158,.25);display:block;}
-.csv-status.err{background:rgba(240,62,92,.1);color:var(--re);border:1px solid rgba(240,62,92,.25);display:block;}
+.csv-status{font-family:"IBM Plex Mono",monospace;font-size:.7rem;padding:8px 12px;border-radius:6px;display:none;}
+.csv-status.ok{background:rgba(0,212,138,.09);color:var(--gr);border:1px solid rgba(0,212,138,.25);display:block;}
+.csv-status.err{background:rgba(255,69,96,.09);color:var(--re);border:1px solid rgba(255,69,96,.25);display:block;}
 .csv-btns{display:flex;gap:8px;justify-content:flex-end;}
-.csv-close{padding:6px 16px;border-radius:5px;border:1px solid var(--b2);background:transparent;color:var(--mu2);font-family:”IBM Plex Mono”,monospace;font-size:0.72rem;cursor:pointer;}
+.csv-close{padding:7px 16px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--t2);font-family:"IBM Plex Mono",monospace;font-size:.7rem;}
 .csv-close:hover{color:var(--tx);}
-.csv-reset{padding:6px 16px;border-radius:5px;border:1px solid rgba(240,62,92,.3);background:rgba(240,62,92,.06);color:var(--re);font-family:”IBM Plex Mono”,monospace;font-size:0.72rem;cursor:pointer;display:none;}
-.csv-reset:hover{background:rgba(240,62,92,.12);}
+.csv-reset{padding:7px 16px;border-radius:6px;border:1px solid rgba(255,69,96,.3);background:rgba(255,69,96,.07);color:var(--re);font-family:"IBM Plex Mono",monospace;font-size:.7rem;display:none;}
+.csv-reset:hover{background:rgba(255,69,96,.14);}
+/* RESPONSIVE */
+@media(max-width:1100px){.kpi-row{grid-template-columns:1fr 1fr;}.sub-tables{grid-template-columns:1fr;}.pnl-kpi{grid-template-columns:1fr 1fr;}.g2{grid-template-columns:1fr;}}
+@media(max-width:700px){.app-header,.app-nav,.app-main{padding-left:16px;padding-right:16px;}.kpi-row{grid-template-columns:1fr;}.pb-summary{grid-template-columns:1fr 1fr;}.pnl-kpi{grid-template-columns:1fr;}.bench-pills{display:none;}}
 </style>
 </head>
-<body><header>
-  <div class="hrow">
-    <div>
-      <div class="htitle">DK <em>Decision Center</em></div>
-      <div class="hsub">118,728 entries · 16 sports · rake benchmarks: 1%→1.2% · 10%→12% · 20%→24% · latest 2026-02-22</div>
+<body>
+<header class="app-header">
+  <div class="logo">
+    <span class="logo-name">DK Edge</span>
+    <span class="logo-sub">DFS Performance Dashboard</span>
+  </div>
+  <div class="header-right">
+    <div class="bench-pills">
+      <div class="bp bp-t1"><div class="bpdot" style="background:var(--re)"></div>Top 1% → 1.2%</div>
+      <div class="bp bp-t10"><div class="bpdot" style="background:var(--am)"></div>Top 10% → 12%</div>
+      <div class="bp bp-t20"><div class="bpdot" style="background:var(--pu)"></div>Top 20% → 24%</div>
     </div>
-    <div class="bpills">
-      <div class="bp bp1"><div class="bpdot" style="background:var(--c1)"></div>Top 1% → 1.2%</div>
-      <div class="bp bp10"><div class="bpdot" style="background:var(--c10)"></div>Top 10% → 12%</div>
-      <div class="bp bp20"><div class="bpdot" style="background:var(--c20)"></div>Top 20% → 24%</div>
-      <button class="csv-btn" id="csvOpenBtn">⬆ Upload CSV</button>
-    </div>
+    <button class="btn-upload" id="csvOpenBtn">↑ Import CSV</button>
   </div>
 </header>
 <div class="csv-overlay" id="csvOverlay">
   <div class="csv-modal">
-    <h2>Import DraftKings CSV</h2>
+    <div class="csv-modal-title">Import DraftKings CSV</div>
     <div class="csv-drop" id="csvDrop">
       <div class="csv-drop-icon">📂</div>
-      <div class="csv-drop-lbl">Click to select or drag &amp; drop your CSV</div>
-      <div class="csv-drop-sub">DraftKings contest history export · My Contests → Download</div>
+      <div class="csv-drop-main">Click to select or drag &amp; drop your CSV</div>
+      <div class="csv-drop-sub">DraftKings contest history — My Contests → Download</div>
       <input type="file" accept=".csv,text/csv" id="csvFile" style="display:none">
     </div>
     <div class="csv-info">
-      <strong>Required columns:</strong> Sport, Date, Place, Winnings<br>
-      <strong>Recommended:</strong> Entry Fee, # Teams (enables full stats)<br>
+      <strong>Required:</strong> Sport, Date, Place, Winnings<br>
+      <strong>Recommended:</strong> Entry Fee, # Teams (enables full finish rate stats)<br>
       <strong>Format detection:</strong> Contest Name column (Showdown / Best Ball / Classic)
     </div>
     <div class="csv-status" id="csvStatus"></div>
     <div class="csv-btns">
-      <button class="csv-reset" id="csvReset">Reset to Original Data</button>
+      <button class="csv-reset" id="csvReset">Reset to Sample Data</button>
       <button class="csv-close" id="csvClose">Close</button>
     </div>
   </div>
 </div>
-<div class="filters">
-  <div class="frow">
-    <span class="flbl">Sport <span style="font-size:.55rem;opacity:.6;text-transform:none;letter-spacing:0">(multi)</span></span>
-    <div class="chips" id="sportChips">
-      <div class="chip on" data-sport="ALL">ALL</div>
-      <div class="chip" data-sport="NBA">NBA</div>
-      <div class="chip" data-sport="NFL">NFL</div>
-      <div class="chip" data-sport="MLB">MLB</div>
-      <div class="chip" data-sport="NHL">NHL</div>
-      <div class="chip" data-sport="MMA">MMA</div>
-      <div class="chip" data-sport="GOLF">GOLF</div>
-      <div class="chip" data-sport="TEN">TENNIS</div>
-      <div class="chip" data-sport="NAS">NASCAR</div>
-      <div class="chip" data-sport="LOL">LoL</div>
-      <div class="chip" data-sport="CS">CS:GO</div>
-      <div class="chip" data-sport="COD">COD</div>
-      <div class="chip" data-sport="F1">F1</div>
-      <div class="chip" data-sport="SOC">SOCCER</div>
-      <div class="chip" data-sport="UFL">UFL</div>
-      <div class="chip" data-sport="CFB">CFB</div>
-      <div class="chip" data-sport="CBB">CBB</div>
-    </div>
-  </div>
-  <div class="frow">
-    <span class="flbl">Format</span>
-    <div class="chips" id="fmtChips">
-      <div class="chip on" data-fmt="ALL">ALL</div>
-      <div class="chip" data-fmt="Classic">Classic</div>
-      <div class="chip" data-fmt="Showdown">Showdown</div>
-      <div class="chip" data-fmt="Best Ball">Best Ball</div>
-    </div>
-  </div>
-</div><div class="tabs">
-  <div class="tab active" data-tab="overview">📊 Overview</div>
-  <div class="tab" data-tab="decision">🎯 Decision Engine</div>
-  <div class="tab" data-tab="optimize">⚙️ Optimize</div>
-  <div class="tab" data-tab="detail">📋 Detail</div>
-  <div class="tab" data-tab="contests">🎟️ Contest Breakdown</div>
-  <div class="tab" data-tab="pnl">💰 P&amp;L Report</div>
-  <div class="tab" data-tab="playbook">📅 Weekly Playbook</div>
-</div><div class="main"><div class="tc active" id="tab-overview">
-  <div class="tcards" id="trendCards"></div>
+<nav class="app-nav">
+  <div class="nav-tab active" data-tab="dashboard">Dashboard</div>
+  <div class="nav-tab" data-tab="performance">Performance</div>
+  <div class="nav-tab" data-tab="trends">Trends</div>
+  <div class="nav-tab" data-tab="pnl">P&amp;L</div>
+</nav>
+<main class="app-main">
+<div class="tab-panel active" id="tab-dashboard">
+  <div class="kpi-row" id="kpiRow"></div>
   <div class="panel">
-    <div class="ph">
-      <div><div class="pt">Monthly Finish Rate Trend</div><div class="ps">Green dots = above bench · Red = below · dashed line = benchmark target</div></div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--mu)">VIEW:</span>
-        <div class="ptog" id="rateToggle">
-          <div class="ptb active" data-rate="top1">Top 1%</div>
-          <div class="ptb" data-rate="top10">Top 10%</div>
-          <div class="ptb" data-rate="top20">Top 20%</div>
-        </div>
+    <div class="panel-hdr">
+      <div><div class="panel-title">Aggregate Finish Rates vs Benchmark</div><div class="panel-sub">Weighted across all sport/format combos · tick mark = benchmark target · green = beating it</div></div>
+      <div id="entrySummary" style="font-family:'IBM Plex Mono',monospace;font-size:.61rem;color:var(--t2)"></div>
+    </div>
+    <div class="panel-body"><div class="fr-rows" id="finishRates"></div></div>
+  </div>
+  <div>
+    <div class="section-hdr">
+      <div class="section-title">Weekly Playbook</div>
+      <div class="section-sub">Action recommendations per sport/format · based on 6-month finish rates vs benchmarks + trend momentum</div>
+    </div>
+    <div class="pb-summary" id="pbSummary"></div>
+    <div class="pb-grid" id="pbGrid"></div>
+  </div>
+</div>
+<div class="tab-panel" id="tab-performance">
+  <div class="filters-bar">
+    <div class="filter-row">
+      <span class="filter-lbl">Window</span>
+      <div class="win-toggle" id="perfWin">
+        <button class="win-btn" data-win="T1M">1 Month</button>
+        <button class="win-btn" data-win="T6M">6 Months</button>
+        <button class="win-btn active" data-win="T12M">12 Months</button>
+        <button class="win-btn" data-win="ALL">All Time</button>
       </div>
     </div>
-    <div class="pb"><div class="ch300"><canvas id="monthlyChart"></canvas></div></div>
-  </div>
-</div><div class="tc" id="tab-decision">
-  <div class="g2">
-    <div class="panel">
-      <div class="ph">
-        <div><div class="pt">Action Quadrant</div><div class="ps">X = performance vs benchmark (pp) · Y = 6-month momentum · bubble size = entry volume</div></div>
-      </div>
-      <div class="pb">
-        <div class="ch360"><canvas id="quadrantChart"></canvas></div>
-        <div class="qleg">
-          <div class="qli"><div class="qld" style="background:var(--gr)"></div>Scale Up — beating bench + improving</div>
-          <div class="qli"><div class="qld" style="background:var(--am)"></div>Monitor — beating bench but declining</div>
-          <div class="qli"><div class="qld" style="background:var(--bl)"></div>Turnaround — below bench but improving</div>
-          <div class="qli"><div class="qld" style="background:var(--re)"></div>Exit / Reduce — below bench + declining</div>
-        </div>
+    <div class="filter-row">
+      <span class="filter-lbl">Sport</span>
+      <div class="chips" id="perfSport">
+        <div class="chip on" data-sport="ALL">ALL</div>
+        <div class="chip" data-sport="NBA">NBA</div><div class="chip" data-sport="NFL">NFL</div>
+        <div class="chip" data-sport="MLB">MLB</div><div class="chip" data-sport="NHL">NHL</div>
+        <div class="chip" data-sport="MMA">MMA</div><div class="chip" data-sport="GOLF">GOLF</div>
+        <div class="chip" data-sport="TEN">TENNIS</div><div class="chip" data-sport="NAS">NASCAR</div>
+        <div class="chip" data-sport="LOL">LoL</div><div class="chip" data-sport="CS">CS:GO</div>
+        <div class="chip" data-sport="COD">COD</div><div class="chip" data-sport="F1">F1</div>
+        <div class="chip" data-sport="SOC">SOCCER</div><div class="chip" data-sport="UFL">UFL</div>
+        <div class="chip" data-sport="CFB">CFB</div><div class="chip" data-sport="CBB">CBB</div>
       </div>
     </div>
-    <div class="panel">
-      <div class="ph"><div><div class="pt">Edge Score Components</div><div class="ps">Benchmark performance (50pt) + momentum (25pt) + sample confidence (25pt)</div></div></div>
-      <div class="pb"><div class="ch360"><canvas id="edgeChart"></canvas></div></div>
+    <div class="filter-row">
+      <span class="filter-lbl">Format</span>
+      <div class="chips" id="perfFmt">
+        <div class="chip on" data-fmt="ALL">ALL</div>
+        <div class="chip" data-fmt="Classic">Classic</div>
+        <div class="chip" data-fmt="Showdown">Showdown</div>
+        <div class="chip" data-fmt="Best Ball">Best Ball</div>
+      </div>
     </div>
   </div>
-  <div class="panel">
-    <div class="ph"><div><div class="pt">Edge Score Leaderboard</div><div class="ps">Composite score 0–100 · Δ columns show pp above/below benchmark · action derived from score + trend</div></div></div>
-    <div id="edgeList"></div>
+  <div class="tbl-panel">
+    <div class="tbl-hdr">
+      <div><div class="tbl-title">Performance Breakdown</div><div class="tbl-sub">Finish rates vs rake benchmarks · Edge Score: benchmark(50) + trend(25) + confidence(25)</div></div>
+    </div>
+    <div style="overflow-x:auto"><div id="perfTable"></div></div>
   </div>
-</div><div class="tc" id="tab-optimize">
-  <div class="ibox"><strong>💡 Optimize tab:</strong> For each sport/format, this shows where your finish rates differ by contest field size and entry fee tier. Concentrate volume in the buckets where you have the clearest edge — not just the cheapest or most comfortable.</div>
-  <div class="g2">
-    <div class="panel">
-      <div class="ph"><div><div class="pt">Field Size Performance</div><div class="ps">Small &lt;500 entries · Medium 500–5K · Large &gt;5K</div></div></div>
+  <div class="sub-tables">
+    <div class="tbl-panel">
+      <div class="tbl-hdr"><div><div class="tbl-title">By Field Size</div><div class="tbl-sub">Small &lt;500 · Medium 500–5K · Large &gt;5K</div></div></div>
       <div style="overflow-x:auto"><div id="fieldTable"></div></div>
     </div>
-    <div class="panel">
-      <div class="ph"><div><div class="pt">Stake Tier Performance</div><div class="ps">Penny ≤$0.50 · Low $0.51–$2 · Mid $2–$5 · High &gt;$5</div></div></div>
+    <div class="tbl-panel">
+      <div class="tbl-hdr"><div><div class="tbl-title">By Stake Tier</div><div class="tbl-sub">Penny ≤$0.25 · Low ≤$2 · Mid ≤$5 · High &gt;$5</div></div></div>
       <div style="overflow-x:auto"><div id="stakeTable"></div></div>
     </div>
   </div>
-  <div class="panel">
-    <div class="ph"><div><div class="pt">Top 10% Finish Rate by Field Size</div><div class="ps">Are you better in big fields or small fields? Benchmark = 12%</div></div></div>
-    <div class="pb"><div class="ch240"><canvas id="fieldChart"></canvas></div></div>
-  </div>
-</div><div class="tc" id="tab-detail">
-  <div class="panel">
-    <div class="ph"><div><div class="pt">Full T1M · T6M · T12M · ALL Breakdown</div><div class="ps">T1M highlighted · ✓/~/✗ vs benchmark · sorted by edge score</div></div></div>
-    <div style="overflow-x:auto"><div id="tableWrap"></div></div>
-  </div></div><div class="tc" id="tab-contests">
-  <div class="cb-filters">
-    <span class="cb-sort-lbl">Format:</span>
-    <div class="chips" id="cbFmt">
-      <div class="chip on" data-fmt="ALL">ALL</div>
-      <div class="chip" data-fmt="Classic">Classic</div>
-      <div class="chip" data-fmt="Showdown">Showdown</div>
-      <div class="chip" data-fmt="Best Ball">Best Ball</div>
+</div>
+<div class="tab-panel" id="tab-trends">
+  <div class="chart-panel">
+    <div class="chart-hdr">
+      <div><div class="tbl-title">Monthly Finish Rate Trend</div><div class="tbl-sub">Green dots = above benchmark · dashed line = benchmark target</div></div>
+      <div class="win-toggle" id="rateToggle">
+        <button class="win-btn active" data-rate="top1">Top 1%</button>
+        <button class="win-btn" data-rate="top10">Top 10%</button>
+        <button class="win-btn" data-rate="top20">Top 20%</button>
+      </div>
     </div>
-    <span class="cb-sort-lbl" style="margin-left:10px">Sort:</span>
-    <div class="chips" id="cbSort">
-      <div class="chip on" data-sort="net">By Net $</div>
-      <div class="chip" data-sort="roi">By ROI %</div>
-      <div class="chip" data-sort="sport">By Sport</div>
-    </div>
+    <div class="chart-body"><div class="ch300"><canvas id="monthlyChart"></canvas></div></div>
   </div>
-  <div class="cb-grid" id="cbGrid"></div>
-</div><div class="tc" id="tab-pnl">
-  <div class="pnl-summary" id="pnlSummary"></div>
-  <div class="panel">
-    <div class="ph">
-      <div><div class="pt">P&amp;L by Sport &amp; Format</div><div class="ps">Lifetime totals · click headers to sort · use sport/format filters above</div></div>
-      <div class="pnl-view-row">
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--mu)">VIEW:</span>
-        <div class="ptog" id="pnlView">
-          <div class="ptb active" data-view="detail">Sport + Format</div>
-          <div class="ptb" data-view="sport">By Sport</div>
+  <div class="g2">
+    <div class="chart-panel">
+      <div class="chart-hdr"><div><div class="tbl-title">Action Quadrant</div><div class="tbl-sub">X = vs benchmark (pp) · Y = 6-month momentum · bubble = volume</div></div></div>
+      <div class="chart-body">
+        <div class="ch300"><canvas id="quadrantChart"></canvas></div>
+        <div class="ql">
+          <div class="ql-item"><div class="ql-dot" style="background:#00d48a"></div>Scale Up</div>
+          <div class="ql-item"><div class="ql-dot" style="background:#f5a320"></div>Monitor</div>
+          <div class="ql-item"><div class="ql-dot" style="background:#4d8fff"></div>Turnaround</div>
+          <div class="ql-item"><div class="ql-dot" style="background:#ff4560"></div>Exit / Reduce</div>
         </div>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-hdr"><div><div class="tbl-title">Edge Score Components</div><div class="tbl-sub">Benchmark(50pt) + Trend(25pt) + Confidence(25pt) · top 15 shown</div></div></div>
+      <div class="chart-body"><div class="ch300"><canvas id="edgeChart"></canvas></div></div>
+    </div>
+  </div>
+</div>
+<div class="tab-panel" id="tab-pnl">
+  <div class="pnl-kpi" id="pnlKpi"></div>
+  <div class="tbl-panel">
+    <div class="tbl-hdr">
+      <div><div class="tbl-title">P&amp;L by Sport &amp; Format</div><div class="tbl-sub">Lifetime totals · click headers to sort</div></div>
+      <div class="win-toggle" id="pnlView">
+        <button class="win-btn active" data-view="detail">Sport + Format</button>
+        <button class="win-btn" data-view="sport">By Sport</button>
       </div>
     </div>
     <div style="overflow-x:auto"><div id="pnlTable"></div></div>
   </div>
-  <div class="panel">
-    <div class="ph"><div><div class="pt">Net P&amp;L Chart</div><div class="ps">Sorted by net dollars · green = profitable · red = losing</div></div></div>
-    <div class="pb"><div class="ch300"><canvas id="pnlChart"></canvas></div></div>
+  <div class="chart-panel">
+    <div class="chart-hdr"><div><div class="tbl-title">Net P&amp;L by Sport</div><div class="tbl-sub">Green = profitable · Red = losing</div></div></div>
+    <div class="chart-body"><div class="ch300"><canvas id="pnlChart"></canvas></div></div>
   </div>
-</div><div class="tc" id="tab-playbook">
-  <div class="pb-summary" id="pbSummary"></div>
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--mu2)">Each sport &amp; format scored independently · T1M rates vs rake benchmarks · 6-month momentum</div>
-    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-      <div class="pb-sort-row">
-        <span class="pb-sort-lbl">Format:</span>
-        <div class="chips" id="pbFmt">
-          <div class="chip on" data-fmt="ALL">ALL</div>
-          <div class="chip" data-fmt="Classic">Classic</div>
-          <div class="chip" data-fmt="Showdown">Showdown</div>
-          <div class="chip" data-fmt="Best Ball">Best Ball</div>
-        </div>
-      </div>
-      <div class="pb-sort-row">
-        <span class="pb-sort-lbl">Sort:</span>
-        <div class="chips" id="pbSort">
-          <div class="chip on" data-sort="rec">By Action</div>
-          <div class="chip" data-sort="sport">By Sport</div>
-          <div class="chip" data-sort="delta">By Edge</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="pb-grid" id="pbGrid"></div>
-</div></div></div><script>
+</div>
+</main>
+<script>
+
 const PD={"CBB|Classic": {"T1M": null, "T6M": null, "T12M": null, "ALL": {"count": 60, "fees": 6.0, "wins": 3.8, "net": -2.2, "roi": -36.7, "top1": 3.33, "top10": 3.33, "top20": 8.33}}, "CBB|Showdown": {"T1M": null, "T6M": null, "T12M": null, "ALL": {"count": 20, "fees": 2.0, "wins": 0.4, "net": -1.6, "roi": -80.0, "top1": 0.0, "top10": 0.0, "top20": 10.0}}, "CFB|Classic": {"T1M": null, "T6M": {"count": 244, "fees": 143.0, "wins": 79.55, "net": -63.45, "roi": -44.4, "top1": 0.41, "top10": 9.84, "top20": 20.08}, "T12M": {"count": 244, "fees": 143.0, "wins": 79.55, "net": -63.45, "roi": -44.4, "top1": 0.41, "top10": 9.84, "top20": 20.08}, "ALL": {"count": 266, "fees": 153.0, "wins": 81.48, "net": -71.52, "roi": -46.7, "top1": 0.38, "top10": 9.4, "top20": 19.55}}, "CFB|Showdown": {"T1M": null, "T6M": {"count": 1, "fees": 0.0, "wins": 0.0, "net": 0.0, "roi": 0, "top1": 0.0, "top10": 0.0, "top20": 0.0}, "T12M": {"count": 1, "fees": 0.0, "wins": 0.0, "net": 0.0, "roi": 0, "top1": 0.0, "top10": 0.0, "top20": 0.0}, "ALL": {"count": 41, "fees": 7.0, "wins": 6.15, "net": -0.85, "roi": -12.1, "top1": 0.0, "top10": 9.76, "top20": 34.15}}, "COD|Classic": {"T1M": null, "T6M": {"count": 74, "fees": 105.0, "wins": 83.6, "net": -21.4, "roi": -20.4, "top1": 0.0, "top10": 8.11, "top20": 16.22}, "T12M": {"count": 250, "fees": 234.0, "wins": 264.35, "net": 30.35, "roi": 13.0, "top1": 0.8, "top10": 9.6, "top20": 22.0}, "ALL": {"count": 333, "fees": 312.5, "wins": 319.97, "net": 7.47, "roi": 2.4, "top1": 0.6, "top10": 9.91, "top20": 20.12}}, "CS|Classic": {"T1M": null, "T6M": null, "T12M": {"count": 561, "fees": 555.45, "wins": 593.79, "net": 38.34, "roi": 6.9, "top1": 0.71, "top10": 14.8, "top20": 25.49}, "ALL": {"count": 699, "fees": 730.9, "wins": 799.4, "net": 68.5, "roi": 9.4, "top1": 0.72, "top10": 15.02, "top20": 25.46}}, "CS|Showdown": {"T1M": null, "T6M": null, "T12M": {"count": 63, "fees": 73.75, "wins": 112.21, "net": 38.46, "roi": 52.1, "top1": 0.0, "top10": 15.87, "top20": 25.4}, "ALL": {"count": 133, "fees": 136.95, "wins": 203.43, "net": 66.48, "roi": 48.5, "top1": 0.75, "top10": 15.04, "top20": 22.56}}, "F1|Classic": {"T1M": null, "T6M": {"count": 45, "fees": 40.0, "wins": 170.17, "net": 130.17, "roi": 325.4, "top1": 4.44, "top10": 15.56, "top20": 17.78}, "T12M": {"count": 866, "fees": 444.0, "wins": 482.78, "net": 38.78, "roi": 8.7, "top1": 1.5, "top10": 11.55, "top20": 25.75}, "ALL": {"count": 1029, "fees": 485.25, "wins": 537.76, "net": 52.51, "roi": 10.8, "top1": 1.75, "top10": 13.7, "top20": 27.7}}, "GOLF|Classic": {"T1M": {"count": 352, "fees": 317.0, "wins": 216.68, "net": -100.32, "roi": -31.6, "top1": 0.57, "top10": 10.23, "top20": 22.16}, "T6M": {"count": 508, "fees": 420.0, "wins": 363.63, "net": -56.37, "roi": -13.4, "top1": 0.79, "top10": 13.39, "top20": 26.38}, "T12M": {"count": 1658, "fees": 914.0, "wins": 807.12, "net": -106.88, "roi": -11.7, "top1": 1.09, "top10": 12.0, "top20": 24.73}, "ALL": {"count": 1920, "fees": 1014.0, "wins": 923.56, "net": -90.44, "roi": -8.9, "top1": 1.04, "top10": 12.19, "top20": 24.79}}, "GOLF|Showdown": {"T1M": {"count": 511, "fees": 215.0, "wins": 183.15, "net": -31.85, "roi": -14.8, "top1": 0.78, "top10": 9.0, "top20": 20.35}, "T6M": {"count": 565, "fees": 242.0, "wins": 200.5, "net": -41.5, "roi": -17.1, "top1": 0.71, "top10": 9.2, "top20": 20.71}, "T12M": {"count": 1800, "fees": 652.2, "wins": 613.86, "net": -38.34, "roi": -5.9, "top1": 1.5, "top10": 11.28, "top20": 24.22}, "ALL": {"count": 2422, "fees": 904.95, "wins": 927.12, "net": 22.17, "roi": 2.4, "top1": 1.57, "top10": 11.81, "top20": 24.24}}, "LOL|Classic": {"T1M": {"count": 16, "fees": 16.0, "wins": 10.81, "net": -5.19, "roi": -32.4, "top1": 0.0, "top10": 6.25, "top20": 18.75}, "T6M": {"count": 203, "fees": 222.25, "wins": 207.14, "net": -15.11, "roi": -6.8, "top1": 0.49, "top10": 13.3, "top20": 22.66}, "T12M": {"count": 1717, "fees": 1275.25, "wins": 966.87, "net": -308.38, "roi": -24.2, "top1": 1.16, "top10": 9.09, "top20": 20.79}, "ALL": {"count": 2023, "fees": 1556.25, "wins": 1146.36, "net": -409.89, "roi": -26.3, "top1": 1.29, "top10": 9.14, "top20": 20.56}}, "LOL|Showdown": {"T1M": null, "T6M": null, "T12M": {"count": 27, "fees": 30.75, "wins": 29.47, "net": -1.28, "roi": -4.2, "top1": 7.41, "top10": 14.81, "top20": 22.22}, "ALL": {"count": 46, "fees": 49.5, "wins": 44.31, "net": -5.19, "roi": -10.5, "top1": 6.52, "top10": 15.22, "top20": 23.91}}, "MLB|Best Ball": {"T1M": null, "T6M": null, "T12M": {"count": 20, "fees": 40.45, "wins": 32.95, "net": -7.5, "roi": -18.5, "top1": 0.0, "top10": 15.0, "top20": 25.0}, "ALL": {"count": 20, "fees": 40.45, "wins": 32.95, "net": -7.5, "roi": -18.5, "top1": 0.0, "top10": 15.0, "top20": 25.0}}, "MLB|Classic": {"T1M": null, "T6M": {"count": 2768, "fees": 1671.0, "wins": 1565.87, "net": -105.13, "roi": -6.3, "top1": 1.73, "top10": 12.46, "top20": 23.52}, "T12M": {"count": 18620, "fees": 9527.2, "wins": 8967.13, "net": -560.07, "roi": -5.9, "top1": 1.31, "top10": 11.87, "top20": 22.74}, "ALL": {"count": 22458, "fees": 10356.2, "wins": 9970.58, "net": -385.62, "roi": -3.7, "top1": 1.39, "top10": 12.18, "top20": 23.04}}, "MLB|Showdown": {"T1M": null, "T6M": {"count": 413, "fees": 253.0, "wins": 280.47, "net": 27.47, "roi": 10.9, "top1": 2.42, "top10": 16.22, "top20": 24.94}, "T12M": {"count": 1229, "fees": 517.5, "wins": 418.92, "net": -98.58, "roi": -19.0, "top1": 1.46, "top10": 10.66, "top20": 19.2}, "ALL": {"count": 1954, "fees": 711.5, "wins": 561.53, "net": -149.97, "roi": -21.1, "top1": 1.28, "top10": 10.24, "top20": 19.81}}, "MMA|Classic": {"T1M": {"count": 274, "fees": 149.0, "wins": 94.92, "net": -54.08, "roi": -36.3, "top1": 1.09, "top10": 11.31, "top20": 20.07}, "T6M": {"count": 608, "fees": 329.0, "wins": 283.32, "net": -45.68, "roi": -13.9, "top1": 1.64, "top10": 13.49, "top20": 24.18}, "T12M": {"count": 1301, "fees": 629.0, "wins": 627.82, "net": -1.18, "roi": -0.2, "top1": 1.23, "top10": 12.07, "top20": 23.44}, "ALL": {"count": 1839, "fees": 771.0, "wins": 783.36, "net": 12.36, "roi": 1.6, "top1": 1.58, "top10": 12.51, "top20": 23.65}}, "NAS|Classic": {"T1M": {"count": 424, "fees": 378.0, "wins": 293.92, "net": -84.08, "roi": -22.2, "top1": 1.42, "top10": 14.15, "top20": 25.71}, "T6M": {"count": 504, "fees": 428.0, "wins": 306.67, "net": -121.33, "roi": -28.3, "top1": 1.19, "top10": 12.3, "top20": 23.21}, "T12M": {"count": 2480, "fees": 1320.8, "wins": 1142.38, "net": -178.42, "roi": -13.5, "top1": 1.05, "top10": 11.45, "top20": 23.23}, "ALL": {"count": 2783, "fees": 1413.05, "wins": 1199.43, "net": -213.62, "roi": -15.1, "top1": 1.01, "top10": 11.28, "top20": 22.96}}, "NBA|Classic": {"T1M": {"count": 3281, "fees": 2158.0, "wins": 2134.27, "net": -23.73, "roi": -1.1, "top1": 1.25, "top10": 12.25, "top20": 23.99}, "T6M": {"count": 11990, "fees": 8255.0, "wins": 8177.69, "net": -77.31, "roi": -0.9, "top1": 1.27, "top10": 11.45, "top20": 22.53}, "T12M": {"count": 18957, "fees": 12724.5, "wins": 14582.72, "net": 1858.22, "roi": 14.6, "top1": 1.3, "top10": 12.26, "top20": 23.99}, "ALL": {"count": 20623, "fees": 13540.8, "wins": 15638.5, "net": 2097.7, "roi": 15.5, "top1": 1.33, "top10": 12.53, "top20": 24.33}}, "NBA|Showdown": {"T1M": {"count": 422, "fees": 262.0, "wins": 244.68, "net": -17.32, "roi": -6.6, "top1": 2.61, "top10": 15.64, "top20": 28.2}, "T6M": {"count": 678, "fees": 441.0, "wins": 350.36, "net": -90.64, "roi": -20.6, "top1": 1.77, "top10": 12.54, "top20": 24.48}, "T12M": {"count": 2422, "fees": 1561.0, "wins": 1172.76, "net": -388.24, "roi": -24.9, "top1": 1.49, "top10": 12.22, "top20": 22.42}, "ALL": {"count": 2787, "fees": 1721.5, "wins": 1297.46, "net": -424.04, "roi": -24.6, "top1": 1.44, "top10": 11.84, "top20": 21.99}}, "NFL|Best Ball": {"T1M": null, "T6M": {"count": 40, "fees": 768.57, "wins": 455.44, "net": -313.13, "roi": -40.7, "top1": 0.0, "top10": 5.0, "top20": 22.5}, "T12M": {"count": 40, "fees": 768.57, "wins": 455.44, "net": -313.13, "roi": -40.7, "top1": 0.0, "top10": 5.0, "top20": 22.5}, "ALL": {"count": 40, "fees": 768.57, "wins": 455.44, "net": -313.13, "roi": -40.7, "top1": 0.0, "top10": 5.0, "top20": 22.5}}, "NFL|Classic": {"T1M": {"count": 184, "fees": 170.0, "wins": 108.97, "net": -61.03, "roi": -35.9, "top1": 0.54, "top10": 7.61, "top20": 15.76}, "T6M": {"count": 14304, "fees": 15216.0, "wins": 15975.23, "net": 759.23, "roi": 5.0, "top1": 1.59, "top10": 14.11, "top20": 26.31}, "T12M": {"count": 14305, "fees": 15216.0, "wins": 15975.23, "net": 759.23, "roi": 5.0, "top1": 1.59, "top10": 14.11, "top20": 26.31}, "ALL": {"count": 26992, "fees": 17860.7, "wins": 19361.06, "net": 1500.36, "roi": 8.4, "top1": 1.61, "top10": 14.07, "top20": 26.6}}, "NFL|Showdown": {"T1M": {"count": 546, "fees": 403.0, "wins": 353.87, "net": -49.13, "roi": -12.2, "top1": 1.65, "top10": 13.55, "top20": 23.81}, "T6M": {"count": 9197, "fees": 9933.0, "wins": 9242.96, "net": -690.04, "roi": -6.9, "top1": 1.44, "top10": 12.8, "top20": 24.33}, "T12M": {"count": 9197, "fees": 9933.0, "wins": 9242.96, "net": -690.04, "roi": -6.9, "top1": 1.44, "top10": 12.8, "top20": 24.33}, "ALL": {"count": 15275, "fees": 11391.25, "wins": 11523.33, "net": 132.08, "roi": 1.2, "top1": 1.39, "top10": 12.93, "top20": 24.54}}, "NHL|Classic": {"T1M": {"count": 659, "fees": 448.0, "wins": 411.87, "net": -36.13, "roi": -8.1, "top1": 1.21, "top10": 11.38, "top20": 22.46}, "T6M": {"count": 2554, "fees": 1701.0, "wins": 1678.73, "net": -22.27, "roi": -1.3, "top1": 1.41, "top10": 12.33, "top20": 22.83}, "T12M": {"count": 5894, "fees": 2659.8, "wins": 2621.85, "net": -37.95, "roi": -1.4, "top1": 1.43, "top10": 12.2, "top20": 22.6}, "ALL": {"count": 8476, "fees": 3488.2, "wins": 3254.32, "net": -233.88, "roi": -6.7, "top1": 1.36, "top10": 12.02, "top20": 22.04}}, "NHL|Showdown": {"T1M": {"count": 61, "fees": 32.0, "wins": 9.2, "net": -22.8, "roi": -71.2, "top1": 0.0, "top10": 6.56, "top20": 16.39}, "T6M": {"count": 103, "fees": 63.0, "wins": 26.7, "net": -36.3, "roi": -57.6, "top1": 0.0, "top10": 6.8, "top20": 14.56}, "T12M": {"count": 784, "fees": 459.25, "wins": 626.76, "net": 167.51, "roi": 36.5, "top1": 1.28, "top10": 11.61, "top20": 22.58}, "ALL": {"count": 1286, "fees": 619.35, "wins": 695.9, "net": 76.55, "roi": 12.4, "top1": 0.86, "top10": 9.1, "top20": 18.9}}, "SOC|Classic": {"T1M": null, "T6M": {"count": 58, "fees": 27.7, "wins": 3.0, "net": -24.7, "roi": -89.2, "top1": 0.0, "top10": 0.0, "top20": 1.72}, "T12M": {"count": 139, "fees": 60.7, "wins": 56.9, "net": -3.8, "roi": -6.3, "top1": 1.44, "top10": 16.55, "top20": 26.62}, "ALL": {"count": 139, "fees": 60.7, "wins": 56.9, "net": -3.8, "roi": -6.3, "top1": 1.44, "top10": 16.55, "top20": 26.62}}, "SOC|Showdown": {"T1M": null, "T6M": null, "T12M": null, "ALL": {"count": 20, "fees": 5.0, "wins": 1.0, "net": -4.0, "roi": -80.0, "top1": 0.0, "top10": 0.0, "top20": 10.0}}, "TEN|Classic": {"T1M": {"count": 807, "fees": 390.0, "wins": 474.98, "net": 84.98, "roi": 21.8, "top1": 1.73, "top10": 12.64, "top20": 23.05}, "T6M": {"count": 1294, "fees": 624.95, "wins": 709.49, "net": 84.54, "roi": 13.5, "top1": 1.39, "top10": 12.67, "top20": 22.26}, "T12M": {"count": 3731, "fees": 1475.45, "wins": 1588.45, "net": 113.0, "roi": 7.7, "top1": 1.31, "top10": 11.02, "top20": 20.96}, "ALL": {"count": 4559, "fees": 1718.4, "wins": 1755.68, "net": 37.28, "roi": 2.2, "top1": 1.18, "top10": 11.14, "top20": 21.32}}, "UFL|Classic": {"T1M": null, "T6M": null, "T12M": {"count": 394, "fees": 242.5, "wins": 312.09, "net": 69.59, "roi": 28.7, "top1": 1.78, "top10": 13.96, "top20": 27.66}, "ALL": {"count": 394, "fees": 242.5, "wins": 312.09, "net": 69.59, "roi": 28.7, "top1": 1.78, "top10": 13.96, "top20": 27.66}}, "UFL|Showdown": {"T1M": null, "T6M": null, "T12M": {"count": 91, "fees": 19.0, "wins": 31.9, "net": 12.9, "roi": 67.9, "top1": 2.2, "top10": 14.29, "top20": 30.77}, "ALL": {"count": 91, "fees": 19.0, "wins": 31.9, "net": 12.9, "roi": 67.9, "top1": 2.2, "top10": 14.29, "top20": 30.77}}};
 const MD={"CBB|Classic": [{"month": "2024-01", "count": 60, "top1": 3.33, "top10": 3.33, "top20": 8.33}], "CBB|Showdown": [{"month": "2024-01", "count": 20, "top1": 0.0, "top10": 0.0, "top20": 10.0}], "CFB|Classic": [{"month": "2024-09", "count": 22, "top1": 0.0, "top10": 4.55, "top20": 13.64}, {"month": "2025-09", "count": 180, "top1": 0.56, "top10": 13.33, "top20": 27.22}, {"month": "2025-11", "count": 64, "top1": 0.0, "top10": 0.0, "top20": 0.0}], "CFB|Showdown": [{"month": "2024-01", "count": 40, "top1": 0.0, "top10": 10.0, "top20": 35.0}, {"month": "2026-01", "count": 1, "top1": 0.0, "top10": 0.0, "top20": 0.0}], "COD|Classic": [{"month": "2023-05", "count": 4, "top1": 0.0, "top10": 0.0, "top20": 25.0}, {"month": "2023-12", "count": 47, "top1": 0.0, "top10": 6.38, "top20": 10.64}, {"month": "2024-01", "count": 3, "top1": 0.0, "top10": 33.33, "top20": 33.33}, {"month": "2024-02", "count": 1, "top1": 0.0, "top10": 0.0, "top20": 0.0}, {"month": "2024-04", "count": 18, "top1": 0.0, "top10": 22.22, "top20": 22.22}, {"month": "2024-05", "count": 8, "top1": 0.0, "top10": 0.0, "top20": 0.0}, {"month": "2025-01", "count": 2, "top1": 0.0, "top10": 50.0, "top20": 50.0}, {"month": "2025-04", "count": 54, "top1": 0.0, "top10": 0.0, "top20": 5.56}, {"month": "2025-05", "count": 86, "top1": 1.16, "top10": 13.95, "top20": 33.72}, {"month": "2025-06", "count": 36, "top1": 2.78, "top10": 16.67, "top20": 30.56}, {"month": "2025-12", "count": 54, "top1": 0.0, "top10": 7.41, "top20": 14.81}, {"month": "2026-01", "count": 20, "top1": 0.0, "top10": 10.0, "top20": 20.0}], "CS|Classic": [{"month": "2024-10", "count": 14, "top1": 0.0, "top10": 0.0, "top20": 7.14}, {"month": "2025-01", "count": 23, "top1": 0.0, "top10": 13.04, "top20": 13.04}, {"month": "2025-02", "count": 119, "top1": 0.84, "top10": 18.49, "top20": 31.93}, {"month": "2025-03", "count": 252, "top1": 1.19, "top10": 12.7, "top20": 21.03}, {"month": "2025-04", "count": 71, "top1": 0.0, "top10": 25.35, "top20": 42.25}, {"month": "2025-05", "count": 116, "top1": 0.86, "top10": 12.07, "top20": 24.14}, {"month": "2025-06", "count": 82, "top1": 0.0, "top10": 15.85, "top20": 24.39}, {"month": "2025-07", "count": 22, "top1": 0.0, "top10": 13.64, "top20": 22.73}], "CS|Showdown": [{"month": "2024-04", "count": 7, "top1": 0.0, "top10": 0.0, "top20": 0.0}, {"month": "2024-09", "count": 14, "top1": 0.0, "top10": 0.0, "top20": 0.0}, {"month": "2025-01", "count": 11, "top1": 9.09, "top10": 18.18, "top20": 27.27}, {"month": "2025-02", "count": 38, "top1": 0.0, "top10": 21.05, "top20": 28.95}, {"month": "2025-03", "count": 11, "top1": 0.0, "top10": 18.18, "top20": 27.27}, {"month": "2025-04", "count": 32, "top1": 0.0, "top10": 9.38, "top20": 21.88}, {"month": "2025-05", "count": 20, "top1": 0.0, "top10": 25.0, "top20": 30.0}], "F1|Classic": [{"month": "2024-03", "count": 58, "top1": 0.0, "top10": 15.52, "top20": 27.59}, {"month": "2024-04", "count": 20, "top1": 0.0, "top10": 0.0, "top20": 0.0}, {"month": "2024-05", "count": 20, "top1": 0.0, "top10": 5.0, "top20": 10.0}, {"month": "2024-10", "count": 65, "top1": 7.69, "top10": 47.69, "top20": 67.69}, {"month": "2025-03", "count": 87, "top1": 2.3, "top10": 12.64, "top20": 33.33}, {"month": "2025-04", "count": 171, "top1": 0.0, "top10": 14.04, "top20": 39.77}, {"month": "2025-05", "count": 303, "top1": 1.32, "top10": 9.24, "top20": 20.79}, {"month": "2025-06", "count": 120, "top1": 0.83, "top10": 10.83, "top20": 21.67}, {"month": "2025-07", "count": 100, "top1": 4.0, "top10": 17.0, "top20": 27.0}, {"month": "2025-08", "count": 40, "top1": 0.0, "top10": 0.0, "top20": 5.0}, {"month": "2025-12", "count": 45, "top1": 4.44, "top10": 15.56, "top20": 17.78}], "GOLF|Classic": [{"month": "2024-04", "count": 21, "top1": 4.76, "top10": 38.1, "top20": 61.9}, {"month": "2024-10", "count": 41, "top1": 0.0, "top10": 7.32, "top20": 17.07}, {"month": "2025-01", "count": 7, "top1": 0.0, "top10": 14.29, "top20": 14.29}, {"month": "2025-02", "count": 259, "top1": 0.39, "top10": 11.58, "top20": 21.62}, {"month": "2025-03", "count": 332, "top1": 1.2, "top10": 12.35, "top20": 26.2}, {"month": "2025-04", "count": 151, "top1": 1.32, "top10": 9.27, "top20": 16.56}, {"month": "2025-05", "count": 121, "top1": 2.48, "top10": 10.74, "top20": 18.18}, {"month": "2025-06", "count": 220, "top1": 0.45, "top10": 14.09, "top20": 31.36}, {"month": "2025-07", "count": 180, "top1": 2.22, "top10": 10.0, "top20": 22.78}, {"month": "2025-08", "count": 80, "top1": 0.0, "top10": 8.75, "top20": 26.25}, {"month": "2025-09", "count": 1, "top1": 0.0, "top10": 100.0, "top20": 100.0}, {"month": "2026-01", "count": 262, "top1": 1.15, "top10": 16.03, "top20": 30.15}, {"month": "2026-02", "count": 245, "top1": 0.41, "top10": 10.2, "top20": 22.04}], "GOLF|Showdown": [{"month": "2024-01", "count": 47, "top1": 2.13, "top10": 4.26, "top20": 6.38}, {"month": "2024-10", "count": 74, "top1": 0.0, "top10": 8.11, "top20": 21.62}, {"month": "2025-01", "count": 67, "top1": 2.99, "top10": 14.93, "top20": 29.85}, {"month": "2025-02", "count": 515, "top1": 1.55, "top10": 13.98, "top20": 24.08}, {"month": "2025-03", "count": 479, "top1": 2.71, "top10": 14.41, "top20": 29.65}, {"month": "2025-04", "count": 350, "top1": 1.14, "top10": 10.57, "top20": 23.71}, {"month": "2025-05", "count": 134, "top1": 2.24, "top10": 13.43, "top20": 24.63}, {"month": "2025-06", "count": 151, "top1": 1.32, "top10": 9.93, "top20": 24.5}, {"month": "2025-07", "count": 40, "top1": 2.5, "top10": 12.5, "top20": 30.0}, {"month": "2026-01", "count": 207, "top1": 0.0, "top10": 6.76, "top20": 19.81}, {"month": "2026-02", "count": 358, "top1": 1.12, "top10": 10.61, "top20": 21.23}], "LOL|Classic": [{"month": "2024-10", "count": 41, "top1": 2.44, "top10": 7.32, "top20": 14.63}, {"month": "2025-01", "count": 37, "top1": 0.0, "top10": 5.41, "top20": 10.81}, {"month": "2025-02", "count": 252, "top1": 1.98, "top10": 9.52, "top20": 19.44}, {"month": "2025-03", "count": 108, "top1": 0.93, "top10": 12.04, "top20": 29.63}, {"month": "2025-04", "count": 516, "top1": 0.97, "top10": 8.91, "top20": 21.71}, {"month": "2025-05", "count": 316, "top1": 1.27, "top10": 5.06, "top20": 12.97}, {"month": "2025-06", "count": 80, "top1": 1.25, "top10": 10.0, "top20": 25.0}, {"month": "2025-07", "count": 352, "top1": 1.7, "top10": 8.24, "top20": 20.74}, {"month": "2025-08", "count": 118, "top1": 1.69, "top10": 14.41, "top20": 27.97}, {"month": "2026-01", "count": 187, "top1": 0.53, "top10": 13.9, "top20": 22.99}, {"month": "2026-02", "count": 16, "top1": 0.0, "top10": 6.25, "top20": 18.75}], "LOL|Showdown": [{"month": "2023-11", "count": 7, "top1": 0.0, "top10": 14.29, "top20": 28.57}, {"month": "2025-02", "count": 39, "top1": 7.69, "top10": 15.38, "top20": 23.08}], "MLB|Best Ball": [{"month": "2025-03", "count": 15, "top1": 0.0, "top10": 20.0, "top20": 33.33}, {"month": "2025-08", "count": 5, "top1": 0.0, "top10": 0.0, "top20": 0.0}], "MLB|Classic": [{"month": "2023-05", "count": 150, "top1": 4.0, "top10": 35.33, "top20": 48.0}, {"month": "2024-03", "count": 80, "top1": 2.5, "top10": 11.25, "top20": 21.25}, {"month": "2024-04", "count": 1426, "top1": 1.05, "top10": 8.91, "top20": 18.79}, {"month": "2024-05", "count": 499, "top1": 1.4, "top10": 13.43, "top20": 23.65}, {"month": "2024-07", "count": 80, "top1": 6.25, "top10": 21.25, "top20": 35.0}, {"month": "2024-08", "count": 60, "top1": 0.0, "top10": 5.0, "top20": 15.0}, {"month": "2024-09", "count": 622, "top1": 3.86, "top10": 21.22, "top20": 35.53}, {"month": "2024-10", "count": 921, "top1": 0.98, "top10": 12.7, "top20": 22.48}, {"month": "2025-03", "count": 800, "top1": 1.38, "top10": 8.62, "top20": 18.0}, {"month": "2025-04", "count": 3078, "top1": 0.84, "top10": 9.71, "top20": 19.46}, {"month": "2025-05", "count": 1238, "top1": 1.53, "top10": 12.04, "top20": 22.94}, {"month": "2025-06", "count": 4097, "top1": 1.29, "top10": 11.89, "top20": 23.26}, {"month": "2025-07", "count": 3640, "top1": 1.32, "top10": 13.08, "top20": 24.7}, {"month": "2025-08", "count": 2999, "top1": 1.3, "top10": 12.84, "top20": 23.51}, {"month": "2025-09", "count": 2190, "top1": 1.78, "top10": 12.01, "top20": 23.47}, {"month": "2025-10", "count": 578, "top1": 1.56, "top10": 14.19, "top20": 23.7}], "MLB|Showdown": [{"month": "2023-10", "count": 40, "top1": 2.5, "top10": 30.0, "top20": 50.0}, {"month": "2023-11", "count": 20, "top1": 0.0, "top10": 15.0, "top20": 60.0}, {"month": "2024-03", "count": 60, "top1": 0.0, "top10": 3.33, "top20": 13.33}, {"month": "2024-04", "count": 180, "top1": 0.56, "top10": 5.56, "top20": 16.11}, {"month": "2024-05", "count": 80, "top1": 1.25, "top10": 12.5, "top20": 31.25}, {"month": "2024-07", "count": 40, "top1": 0.0, "top10": 2.5, "top20": 7.5}, {"month": "2024-09", "count": 120, "top1": 0.83, "top10": 7.5, "top20": 20.0}, {"month": "2024-10", "count": 185, "top1": 1.62, "top10": 11.89, "top20": 16.22}, {"month": "2025-03", "count": 163, "top1": 1.23, "top10": 5.52, "top20": 17.79}, {"month": "2025-04", "count": 364, "top1": 0.82, "top10": 6.59, "top20": 14.84}, {"month": "2025-05", "count": 209, "top1": 0.96, "top10": 11.0, "top20": 18.66}, {"month": "2025-06", "count": 40, "top1": 0.0, "top10": 7.5, "top20": 10.0}, {"month": "2025-07", "count": 40, "top1": 2.5, "top10": 12.5, "top20": 17.5}, {"month": "2025-09", "count": 61, "top1": 3.28, "top10": 9.84, "top20": 22.95}, {"month": "2025-10", "count": 352, "top1": 2.27, "top10": 17.33, "top20": 25.28}], "MMA|Classic": [{"month": "2024-03", "count": 20, "top1": 5.0, "top10": 10.0, "top20": 15.0}, {"month": "2024-04", "count": 60, "top1": 3.33, "top10": 13.33, "top20": 35.0}, {"month": "2024-05", "count": 40, "top1": 0.0, "top10": 7.5, "top20": 20.0}, {"month": "2024-09", "count": 101, "top1": 5.94, "top10": 20.79, "top20": 28.71}, {"month": "2024-10", "count": 204, "top1": 0.0, "top10": 6.86, "top20": 12.75}, {"month": "2025-01", "count": 3, "top1": 0.0, "top10": 0.0, "top20": 33.33}, {"month": "2025-02", "count": 109, "top1": 3.67, "top10": 22.94, "top20": 38.53}, {"month": "2025-03", "count": 189, "top1": 1.06, "top10": 12.7, "top20": 24.34}, {"month": "2025-04", "count": 103, "top1": 0.0, "top10": 0.97, "top20": 9.71}, {"month": "2025-05", "count": 61, "top1": 1.64, "top10": 6.56, "top20": 24.59}, {"month": "2025-06", "count": 120, "top1": 1.67, "top10": 16.67, "top20": 30.83}, {"month": "2025-07", "count": 100, "top1": 0.0, "top10": 11.0, "top20": 22.0}, {"month": "2025-08", "count": 120, "top1": 0.83, "top10": 12.5, "top20": 23.33}, {"month": "2025-09", "count": 40, "top1": 0.0, "top10": 12.5, "top20": 22.5}, {"month": "2025-11", "count": 125, "top1": 3.2, "top10": 19.2, "top20": 28.0}, {"month": "2025-12", "count": 169, "top1": 1.78, "top10": 13.02, "top20": 28.4}, {"month": "2026-01", "count": 149, "top1": 0.67, "top10": 12.75, "top20": 20.81}, {"month": "2026-02", "count": 125, "top1": 1.6, "top10": 9.6, "top20": 19.2}], "NAS|Classic": [{"month": "2024-02", "count": 20, "top1": 0.0, "top10": 0.0, "top20": 5.0}, {"month": "2024-03", "count": 20, "top1": 0.0, "top10": 0.0, "top20": 20.0}, {"month": "2025-02", "count": 329, "top1": 1.52, "top10": 12.16, "top20": 25.84}, {"month": "2025-03", "count": 453, "top1": 0.44, "top10": 7.06, "top20": 18.54}, {"month": "2025-04", "count": 324, "top1": 0.31, "top10": 10.49, "top20": 21.6}, {"month": "2025-05", "count": 213, "top1": 0.47, "top10": 8.92, "top20": 15.96}, {"month": "2025-06", "count": 400, "top1": 1.75, "top10": 12.0, "top20": 23.75}, {"month": "2025-07", "count": 320, "top1": 1.56, "top10": 17.19, "top20": 31.56}, {"month": "2025-08", "count": 200, "top1": 0.5, "top10": 12.0, "top20": 24.0}, {"month": "2025-09", "count": 80, "top1": 0.0, "top10": 2.5, "top20": 10.0}, {"month": "2026-02", "count": 424, "top1": 1.42, "top10": 14.15, "top20": 25.71}], "NBA|Classic": [{"month": "2024-01", "count": 18, "top1": 0.0, "top10": 16.67, "top20": 38.89}, {"month": "2024-02", "count": 20, "top1": 0.0, "top10": 0.0, "top20": 0.0}, {"month": "2024-04", "count": 40, "top1": 0.0, "top10": 12.5, "top20": 30.0}, {"month": "2024-05", "count": 20, "top1": 0.0, "top10": 0.0, "top20": 15.0}, {"month": "2024-10", "count": 185, "top1": 1.08, "top10": 11.35, "top20": 22.7}, {"month": "2024-11", "count": 161, "top1": 0.0, "top10": 16.77, "top20": 29.19}, {"month": "2025-01", "count": 268, "top1": 1.12, "top10": 12.69, "top20": 21.27}, {"month": "2025-02", "count": 1170, "top1": 2.39, "top10": 17.35, "top20": 30.94}, {"month": "2025-03", "count": 2172, "top1": 1.66, "top10": 15.06, "top20": 28.13}, {"month": "2025-04", "count": 2475, "top1": 1.13, "top10": 14.1, "top20": 28.57}, {"month": "2025-05", "count": 1824, "top1": 1.15, "top10": 10.91, "top20": 21.82}, {"month": "2025-06", "count": 120, "top1": 0.0, "top10": 14.17, "top20": 23.33}, {"month": "2025-07", "count": 80, "top1": 3.75, "top10": 16.25, "top20": 26.25}, {"month": "2025-10", "count": 1467, "top1": 1.16, "top10": 10.97, "top20": 21.47}, {"month": "2025-11", "count": 4061, "top1": 1.26, "top10": 10.44, "top20": 21.13}, {"month": "2025-12", "count": 1325, "top1": 1.43, "top10": 13.21, "top20": 25.06}, {"month": "2026-01", "count": 2992, "top1": 1.34, "top10": 11.83, "top20": 22.59}, {"month": "2026-02", "count": 2145, "top1": 1.17, "top10": 12.07, "top20": 24.24}], "NBA|Showdown": [{"month": "2023-11", "count": 20, "top1": 0.0, "top10": 0.0, "top20": 0.0}, {"month": "2023-12", "count": 62, "top1": 3.23, "top10": 12.9, "top20": 20.97}, {"month": "2024-01", "count": 40, "top1": 0.0, "top10": 2.5, "top20": 5.0}, {"month": "2024-02", "count": 21, "top1": 0.0, "top10": 28.57, "top20": 47.62}, {"month": "2024-03", "count": 40, "top1": 0.0, "top10": 5.0, "top20": 7.5}, {"month": "2025-01", "count": 37, "top1": 2.7, "top10": 10.81, "top20": 27.03}, {"month": "2025-02", "count": 145, "top1": 0.69, "top10": 8.97, "top20": 22.07}, {"month": "2025-04", "count": 21, "top1": 0.0, "top10": 9.52, "top20": 14.29}, {"month": "2025-05", "count": 1422, "top1": 1.62, "top10": 13.15, "top20": 23.0}, {"month": "2025-06", "count": 301, "top1": 0.33, "top10": 7.31, "top20": 15.61}, {"month": "2025-10", "count": 83, "top1": 0.0, "top10": 7.23, "top20": 12.05}, {"month": "2025-11", "count": 66, "top1": 1.52, "top10": 10.61, "top20": 25.76}, {"month": "2025-12", "count": 107, "top1": 0.0, "top10": 5.61, "top20": 18.69}, {"month": "2026-02", "count": 422, "top1": 2.61, "top10": 15.64, "top20": 28.2}], "NFL|Best Ball": [{"month": "2025-09", "count": 17, "top1": 0.0, "top10": 0.0, "top20": 23.53}, {"month": "2025-12", "count": 6, "top1": 0.0, "top10": 33.33, "top20": 66.67}, {"month": "2026-01", "count": 17, "top1": 0.0, "top10": 0.0, "top20": 5.88}], "NFL|Classic": [{"month": "2023-10", "count": 242, "top1": 0.83, "top10": 10.74, "top20": 20.66}, {"month": "2023-11", "count": 182, "top1": 0.55, "top10": 8.24, "top20": 18.13}, {"month": "2023-12", "count": 262, "top1": 1.53, "top10": 16.79, "top20": 29.01}, {"month": "2024-01", "count": 220, "top1": 1.82, "top10": 10.91, "top20": 25.91}, {"month": "2024-09", "count": 1728, "top1": 2.55, "top10": 18.98, "top20": 33.45}, {"month": "2024-10", "count": 3807, "top1": 1.73, "top10": 13.79, "top20": 26.0}, {"month": "2024-11", "count": 3284, "top1": 1.4, "top10": 12.48, "top20": 23.87}, {"month": "2024-12", "count": 2486, "top1": 1.45, "top10": 14.08, "top20": 29.49}, {"month": "2025-01", "count": 476, "top1": 0.84, "top10": 12.18, "top20": 24.16}, {"month": "2025-04", "count": 1, "top1": 0.0, "top10": 0.0, "top20": 0.0}, {"month": "2025-09", "count": 2058, "top1": 2.38, "top10": 16.62, "top20": 29.88}, {"month": "2025-10", "count": 2971, "top1": 1.45, "top10": 15.72, "top20": 28.68}, {"month": "2025-11", "count": 3993, "top1": 1.45, "top10": 13.17, "top20": 23.94}, {"month": "2025-12", "count": 3408, "top1": 1.79, "top10": 14.5, "top20": 27.58}, {"month": "2026-01", "count": 1874, "top1": 0.85, "top10": 10.14, "top20": 21.34}], "NFL|Showdown": [{"month": "2021-10", "count": 1, "top1": 0.0, "top10": 0.0, "top20": 0.0}, {"month": "2023-10", "count": 650, "top1": 1.38, "top10": 14.62, "top20": 25.69}, {"month": "2023-11", "count": 420, "top1": 0.71, "top10": 10.95, "top20": 23.33}, {"month": "2023-12", "count": 940, "top1": 1.38, "top10": 12.02, "top20": 24.57}, {"month": "2024-01", "count": 560, "top1": 0.54, "top10": 9.11, "top20": 19.64}, {"month": "2024-02", "count": 21, "top1": 0.0, "top10": 4.76, "top20": 4.76}, {"month": "2024-09", "count": 524, "top1": 1.15, "top10": 12.6, "top20": 20.42}, {"month": "2024-10", "count": 973, "top1": 1.54, "top10": 15.72, "top20": 28.26}, {"month": "2024-11", "count": 753, "top1": 1.59, "top10": 16.6, "top20": 31.61}, {"month": "2024-12", "count": 949, "top1": 1.16, "top10": 10.12, "top20": 20.65}, {"month": "2025-01", "count": 201, "top1": 3.48, "top10": 16.92, "top20": 30.85}, {"month": "2025-02", "count": 86, "top1": 2.33, "top10": 20.93, "top20": 30.23}, {"month": "2025-09", "count": 1204, "top1": 2.08, "top10": 14.37, "top20": 26.58}, {"month": "2025-10", "count": 1773, "top1": 1.69, "top10": 13.76, "top20": 25.83}, {"month": "2025-11", "count": 2256, "top1": 1.33, "top10": 12.15, "top20": 23.63}, {"month": "2025-12", "count": 2021, "top1": 1.04, "top10": 12.27, "top20": 23.16}, {"month": "2026-01", "count": 1540, "top1": 1.1, "top10": 11.69, "top20": 23.44}, {"month": "2026-02", "count": 403, "top1": 2.23, "top10": 14.39, "top20": 24.32}], "NHL|Classic": [{"month": "2023-11", "count": 28, "top1": 0.0, "top10": 14.29, "top20": 39.29}, {"month": "2023-12", "count": 27, "top1": 0.0, "top10": 18.52, "top20": 29.63}, {"month": "2024-01", "count": 320, "top1": 1.56, "top10": 11.56, "top20": 20.0}, {"month": "2024-02", "count": 260, "top1": 0.77, "top10": 5.77, "top20": 14.23}, {"month": "2024-04", "count": 80, "top1": 0.0, "top10": 13.75, "top20": 17.5}, {"month": "2024-05", "count": 40, "top1": 0.0, "top10": 2.5, "top20": 5.0}, {"month": "2024-10", "count": 978, "top1": 1.53, "top10": 14.21, "top20": 23.82}, {"month": "2024-11", "count": 88, "top1": 0.0, "top10": 5.68, "top20": 9.09}, {"month": "2025-01", "count": 245, "top1": 2.04, "top10": 11.84, "top20": 24.08}, {"month": "2025-02", "count": 637, "top1": 1.1, "top10": 12.4, "top20": 21.66}, {"month": "2025-03", "count": 1291, "top1": 1.08, "top10": 12.08, "top20": 23.7}, {"month": "2025-04", "count": 1427, "top1": 1.82, "top10": 11.77, "top20": 21.44}, {"month": "2025-05", "count": 327, "top1": 1.22, "top10": 12.23, "top20": 21.41}, {"month": "2025-10", "count": 440, "top1": 2.27, "top10": 13.86, "top20": 23.64}, {"month": "2025-11", "count": 630, "top1": 0.48, "top10": 11.43, "top20": 21.75}, {"month": "2025-12", "count": 402, "top1": 1.99, "top10": 10.7, "top20": 22.14}, {"month": "2026-01", "count": 784, "top1": 1.66, "top10": 14.8, "top20": 23.98}, {"month": "2026-02", "count": 298, "top1": 0.67, "top10": 7.72, "top20": 21.81}], "NHL|Showdown": [{"month": "2021-05", "count": 3, "top1": 0.0, "top10": 0.0, "top20": 33.33}, {"month": "2023-10", "count": 100, "top1": 0.0, "top10": 4.0, "top20": 10.0}, {"month": "2023-11", "count": 20, "top1": 0.0, "top10": 0.0, "top20": 0.0}, {"month": "2023-12", "count": 27, "top1": 0.0, "top10": 11.11, "top20": 33.33}, {"month": "2024-01", "count": 10, "top1": 0.0, "top10": 10.0, "top20": 30.0}, {"month": "2024-03", "count": 120, "top1": 0.0, "top10": 1.67, "top20": 8.33}, {"month": "2024-05", "count": 20, "top1": 0.0, "top10": 5.0, "top20": 20.0}, {"month": "2024-10", "count": 63, "top1": 1.59, "top10": 7.94, "top20": 14.29}, {"month": "2025-01", "count": 12, "top1": 0.0, "top10": 8.33, "top20": 33.33}, {"month": "2025-02", "count": 127, "top1": 0.0, "top10": 7.09, "top20": 12.6}, {"month": "2025-05", "count": 441, "top1": 0.91, "top10": 11.56, "top20": 24.26}, {"month": "2025-06", "count": 240, "top1": 2.5, "top10": 13.75, "top20": 22.92}, {"month": "2025-10", "count": 42, "top1": 0.0, "top10": 7.14, "top20": 11.9}, {"month": "2026-01", "count": 61, "top1": 0.0, "top10": 6.56, "top20": 16.39}], "SOC|Classic": [{"month": "2025-05", "count": 41, "top1": 0.0, "top10": 24.39, "top20": 43.9}, {"month": "2025-08", "count": 40, "top1": 5.0, "top10": 32.5, "top20": 45.0}, {"month": "2025-11", "count": 58, "top1": 0.0, "top10": 0.0, "top20": 1.72}], "SOC|Showdown": [{"month": "2024-04", "count": 20, "top1": 0.0, "top10": 0.0, "top20": 10.0}], "TEN|Classic": [{"month": "2024-02", "count": 40, "top1": 0.0, "top10": 12.5, "top20": 25.0}, {"month": "2024-09", "count": 20, "top1": 0.0, "top10": 10.0, "top20": 15.0}, {"month": "2024-10", "count": 198, "top1": 1.01, "top10": 10.61, "top20": 25.76}, {"month": "2025-01", "count": 39, "top1": 0.0, "top10": 5.13, "top20": 12.82}, {"month": "2025-02", "count": 705, "top1": 0.71, "top10": 12.91, "top20": 22.98}, {"month": "2025-03", "count": 700, "top1": 1.14, "top10": 8.43, "top20": 18.71}, {"month": "2025-04", "count": 802, "top1": 1.12, "top10": 10.1, "top20": 20.32}, {"month": "2025-05", "count": 200, "top1": 1.5, "top10": 10.5, "top20": 22.0}, {"month": "2025-06", "count": 400, "top1": 1.75, "top10": 11.25, "top20": 21.0}, {"month": "2025-07", "count": 161, "top1": 1.24, "top10": 10.56, "top20": 19.25}, {"month": "2025-10", "count": 60, "top1": 1.67, "top10": 8.33, "top20": 13.33}, {"month": "2026-01", "count": 509, "top1": 0.98, "top10": 13.36, "top20": 21.22}, {"month": "2026-02", "count": 725, "top1": 1.66, "top10": 12.55, "top20": 23.72}], "UFL|Classic": [{"month": "2025-03", "count": 62, "top1": 0.0, "top10": 4.84, "top20": 11.29}, {"month": "2025-04", "count": 109, "top1": 1.83, "top10": 8.26, "top20": 22.94}, {"month": "2025-05", "count": 195, "top1": 2.56, "top10": 18.97, "top20": 33.85}, {"month": "2025-06", "count": 28, "top1": 0.0, "top10": 21.43, "top20": 39.29}], "UFL|Showdown": [{"month": "2025-03", "count": 76, "top1": 2.63, "top10": 17.11, "top20": 35.53}, {"month": "2025-04", "count": 15, "top1": 0.0, "top10": 0.0, "top20": 6.67}]};
 const FD={"CBB|Classic": {"medium": {"count": 60, "fees": 6.0, "wins": 3.8, "net": -2.2, "roi": -36.7, "top1": 3.33, "top10": 3.33, "top20": 8.33}}, "CBB|Showdown": {"medium": {"count": 20, "fees": 2.0, "wins": 0.4, "net": -1.6, "roi": -80.0, "top1": 0.0, "top10": 0.0, "top20": 10.0}}, "CFB|Classic": {"small": {"count": 3, "fees": 9.0, "wins": 0.0, "net": -9.0, "roi": -100.0, "top1": 0.0, "top10": 0.0, "top20": 0.0}, "medium": {"count": 182, "fees": 97.0, "wins": 47.43, "net": -49.57, "roi": -51.1, "top1": 0.55, "top10": 7.69, "top20": 17.03}, "large": {"count": 81, "fees": 47.0, "wins": 34.05, "net": -12.95, "roi": -27.6, "top1": 0.0, "top10": 13.58, "top20": 25.93}}, "CFB|Showdown": {"small": {"count": 1, "fees": 0.0, "wins": 0.0, "net": 0.0, "roi": 0, "top1": 0.0, "top10": 0.0, "top20": 0.0}, "large": {"count": 40, "fees": 7.0, "wins": 6.15, "net": -0.85, "roi": -12.1, "top1": 0.0, "top10": 10.0, "top20": 35.0}}, "COD|Classic": {"small": {"count": 313, "fees": 265.5, "wins": 302.97, "net": 37.47, "roi": 14.1, "top1": 0.64, "top10": 10.22, "top20": 20.77}, "medium": {"count": 20, "fees": 47.0, "wins": 17.0, "net": -30.0, "roi": -63.8, "top1": 0.0, "top10": 5.0, "top20": 10.0}}, "CS|Classic": {"small": {"count": 699, "fees": 730.9, "wins": 799.4, "net": 68.5, "roi": 9.4, "top1": 0.72, "top10": 15.02, "top20": 25.46}}, "CS|Showdown": {"small": {"count": 133, "fees": 136.95, "wins": 203.43, "net": 66.48, "roi": 48.5, "top1": 0.75, "top10": 15.04, "top20": 22.56}}, "F1|Classic": {"small": {"count": 51, "fees": 84.25, "wins": 175.33, "net": 91.08, "roi": 108.1, "top1": 1.96, "top10": 3.92, "top20": 15.69}, "medium": {"count": 687, "fees": 312.0, "wins": 293.12, "net": -18.88, "roi": -6.1, "top1": 2.18, "top10": 14.56, "top20": 27.66}, "large": {"count": 291, "fees": 89.0, "wins": 69.31, "net": -19.69, "roi": -22.1, "top1": 0.69, "top10": 13.4, "top20": 29.9}}, "GOLF|Classic": {"medium": {"count": 497, "fees": 190.0, "wins": 137.06, "net": -52.94, "roi": -27.9, "top1": 0.8, "top10": 12.68, "top20": 23.34}, "large": {"count": 1421, "fees": 822.0, "wins": 786.5, "net": -35.5, "roi": -4.3, "top1": 1.13, "top10": 12.03, "top20": 25.33}, "small": {"count": 2, "fees": 2.0, "wins": 0.0, "net": -2.0, "roi": -100.0, "top1": 0.0, "top10": 0.0, "top20": 0.0}}, "GOLF|Showdown": {"medium": {"count": 1547, "fees": 581.95, "wins": 583.47, "net": 1.52, "roi": 0.3, "top1": 1.68, "top10": 11.31, "top20": 23.34}, "large": {"count": 808, "fees": 235.0, "wins": 176.15, "net": -58.85, "roi": -25.0, "top1": 1.36, "top10": 13.0, "top20": 25.99}, "small": {"count": 67, "fees": 88.0, "wins": 167.5, "net": 79.5, "roi": 90.3, "top1": 1.49, "top10": 8.96, "top20": 23.88}}, "LOL|Classic": {"small": {"count": 1187, "fees": 751.25, "wins": 566.47, "net": -184.78, "roi": -24.6, "top1": 1.43, "top10": 9.01, "top20": 21.65}, "medium": {"count": 836, "fees": 805.0, "wins": 579.89, "net": -225.11, "roi": -28.0, "top1": 1.08, "top10": 9.33, "top20": 19.02}}, "LOL|Showdown": {"small": {"count": 46, "fees": 49.5, "wins": 44.31, "net": -5.19, "roi": -10.5, "top1": 6.52, "top10": 15.22, "top20": 23.91}}, "MLB|Best Ball": {"small": {"count": 20, "fees": 40.45, "wins": 32.95, "net": -7.5, "roi": -18.5, "top1": 0.0, "top10": 15.0, "top20": 25.0}}, "MLB|Classic": {"medium": {"count": 14965, "fees": 6670.7, "wins": 6830.98, "net": 160.28, "roi": 2.4, "top1": 1.44, "top10": 12.11, "top20": 22.7}, "large": {"count": 7457, "fees": 3607.0, "wins": 3090.3, "net": -516.7, "roi": -14.3, "top1": 1.29, "top10": 12.32, "top20": 23.76}, "small": {"count": 36, "fees": 78.5, "wins": 49.3, "net": -29.2, "roi": -37.2, "top1": 0.0, "top10": 8.33, "top20": 16.67}}, "MLB|Showdown": {"large": {"count": 400, "fees": 160.0, "wins": 179.69, "net": 19.69, "roi": 12.3, "top1": 2.0, "top10": 14.5, "top20": 27.0}, "medium": {"count": 1519, "fees": 498.0, "wins": 359.84, "net": -138.16, "roi": -27.7, "top1": 1.12, "top10": 9.02, "top20": 17.91}, "small": {"count": 35, "fees": 53.5, "wins": 22.0, "net": -31.5, "roi": -58.9, "top1": 0.0, "top10": 14.29, "top20": 20.0}}, "MMA|Classic": {"medium": {"count": 817, "fees": 220.0, "wins": 174.33, "net": -45.67, "roi": -20.8, "top1": 1.84, "top10": 11.75, "top20": 22.15}, "large": {"count": 1020, "fees": 525.0, "wins": 607.03, "net": 82.03, "roi": 15.6, "top1": 1.37, "top10": 13.04, "top20": 24.8}, "small": {"count": 2, "fees": 26.0, "wins": 2.0, "net": -24.0, "roi": -92.3, "top1": 0.0, "top10": 50.0, "top20": 50.0}}, "NAS|Classic": {"large": {"count": 1795, "fees": 1113.0, "wins": 955.86, "net": -157.14, "roi": -14.1, "top1": 1.06, "top10": 12.09, "top20": 23.73}, "medium": {"count": 986, "fees": 298.05, "wins": 243.57, "net": -54.48, "roi": -18.3, "top1": 0.91, "top10": 9.84, "top20": 21.6}, "small": {"count": 2, "fees": 2.0, "wins": 0.0, "net": -2.0, "roi": -100.0, "top1": 0.0, "top10": 0.0, "top20": 0.0}}, "NBA|Classic": {"large": {"count": 9997, "fees": 6936.5, "wins": 8425.42, "net": 1488.92, "roi": 21.5, "top1": 1.42, "top10": 12.93, "top20": 24.76}, "medium": {"count": 10437, "fees": 5683.3, "wins": 6391.3, "net": 708.0, "roi": 12.5, "top1": 1.25, "top10": 12.19, "top20": 24.01}, "small": {"count": 189, "fees": 921.0, "wins": 821.78, "net": -99.22, "roi": -10.8, "top1": 1.59, "top10": 10.05, "top20": 19.58}}, "NBA|Showdown": {"medium": {"count": 1136, "fees": 542.0, "wins": 406.6, "net": -135.4, "roi": -25.0, "top1": 1.5, "top10": 11.71, "top20": 20.95}, "large": {"count": 1611, "fees": 995.0, "wins": 724.6, "net": -270.4, "roi": -27.2, "top1": 1.43, "top10": 11.79, "top20": 22.66}, "small": {"count": 40, "fees": 184.5, "wins": 166.26, "net": -18.24, "roi": -9.9, "top1": 0.0, "top10": 17.5, "top20": 25.0}}, "NFL|Best Ball": {"small": {"count": 40, "fees": 768.57, "wins": 455.44, "net": -313.13, "roi": -40.7, "top1": 0.0, "top10": 5.0, "top20": 22.5}}, "NFL|Classic": {"medium": {"count": 10975, "fees": 7157.7, "wins": 9886.93, "net": 2729.23, "roi": 38.1, "top1": 1.67, "top10": 14.03, "top20": 26.62}, "large": {"count": 15783, "fees": 10052.0, "wins": 8723.63, "net": -1328.37, "roi": -13.2, "top1": 1.57, "top10": 14.05, "top20": 26.55}, "small": {"count": 234, "fees": 651.0, "wins": 750.5, "net": 99.5, "roi": 15.3, "top1": 1.28, "top10": 17.52, "top20": 28.63}}, "NFL|Showdown": {"large": {"count": 13398, "fees": 9292.0, "wins": 8949.45, "net": -342.55, "roi": -3.7, "top1": 1.46, "top10": 12.92, "top20": 24.56}, "medium": {"count": 1679, "fees": 1899.0, "wins": 2466.13, "net": 567.13, "roi": 29.9, "top1": 0.95, "top10": 12.81, "top20": 24.66}, "small": {"count": 198, "fees": 200.25, "wins": 107.75, "net": -92.5, "roi": -46.2, "top1": 0.51, "top10": 14.65, "top20": 22.73}}, "NHL|Classic": {"medium": {"count": 6671, "fees": 2144.0, "wins": 1911.14, "net": -232.86, "roi": -10.9, "top1": 1.33, "top10": 12.04, "top20": 21.84}, "small": {"count": 404, "fees": 634.2, "wins": 605.2, "net": -29.0, "roi": -4.6, "top1": 0.99, "top10": 13.12, "top20": 26.98}, "large": {"count": 1401, "fees": 710.0, "wins": 737.98, "net": 27.98, "roi": 3.9, "top1": 1.57, "top10": 11.63, "top20": 21.56}}, "NHL|Showdown": {"medium": {"count": 1060, "fees": 421.75, "wins": 405.23, "net": -16.52, "roi": -3.9, "top1": 0.66, "top10": 9.25, "top20": 19.06}, "small": {"count": 106, "fees": 92.6, "wins": 39.7, "net": -52.9, "roi": -57.1, "top1": 0.94, "top10": 6.6, "top20": 17.92}, "large": {"count": 120, "fees": 105.0, "wins": 250.97, "net": 145.97, "roi": 139.0, "top1": 2.5, "top10": 10.0, "top20": 18.33}}, "SOC|Classic": {"medium": {"count": 137, "fees": 58.7, "wins": 54.9, "net": -3.8, "roi": -6.5, "top1": 1.46, "top10": 16.79, "top20": 26.28}, "small": {"count": 2, "fees": 2.0, "wins": 2.0, "net": 0.0, "roi": 0.0, "top1": 0.0, "top10": 0.0, "top20": 50.0}}, "SOC|Showdown": {"medium": {"count": 20, "fees": 5.0, "wins": 1.0, "net": -4.0, "roi": -80.0, "top1": 0.0, "top10": 0.0, "top20": 10.0}}, "TEN|Classic": {"medium": {"count": 4335, "fees": 1363.4, "wins": 1295.94, "net": -67.46, "roi": -4.9, "top1": 1.2, "top10": 11.16, "top20": 21.41}, "small": {"count": 164, "fees": 313.0, "wins": 284.84, "net": -28.16, "roi": -9.0, "top1": 0.0, "top10": 10.98, "top20": 21.95}, "large": {"count": 60, "fees": 42.0, "wins": 174.9, "net": 132.9, "roi": 316.4, "top1": 3.33, "top10": 10.0, "top20": 13.33}}, "UFL|Classic": {"small": {"count": 54, "fees": 100.5, "wins": 112.25, "net": 11.75, "roi": 11.7, "top1": 0.0, "top10": 14.81, "top20": 33.33}, "medium": {"count": 340, "fees": 142.0, "wins": 199.84, "net": 57.84, "roi": 40.7, "top1": 2.06, "top10": 13.82, "top20": 26.76}}, "UFL|Showdown": {"small": {"count": 31, "fees": 10.0, "wins": 17.0, "net": 7.0, "roi": 70.0, "top1": 3.23, "top10": 12.9, "top20": 19.35}, "medium": {"count": 60, "fees": 9.0, "wins": 14.9, "net": 5.9, "roi": 65.6, "top1": 1.67, "top10": 15.0, "top20": 36.67}}};
@@ -1457,6 +1387,326 @@ document.getElementById("rateToggle").addEventListener("click",e=>{
   document.querySelectorAll(".ptb").forEach(x=>x.classList.toggle("active",x===b));
   renderMonthly();
 });
+
+
+
+
+let PFM="ALL";
+let PWIN="T12M";
+
+let PNL_SORT={col:"net",dir:-1};
+let _mChart=null,_qChart=null,_eChart=null,_pChart=null;
+
+function vc(v,b){return v>=b?"#00d48a":v>=b*.8?"#f5a320":"#ff4560";}
+function sl(s){return `<span class="s-tag">${s}</span>`;}
+function fc(f){const c=f==="Showdown"?"fmt-s":f==="Best Ball"?"fmt-b":"fmt-c";return `<span class="f-tag ${c}">${f}</span>`;}
+function r2(v){return Math.round(v*100)/100;}
+
+function perfKeys(){
+  return Object.keys(PD).filter(k=>{
+    const[sp,fm]=k.split("|");
+    return(SP.has("ALL")||SP.has(sp))&&(PFM==="ALL"||fm===PFM);
+  });
+}
+
+function wagg(keys,win){
+  const items=keys.map(k=>PD[k][win]).filter(Boolean);
+  if(!items.length)return null;
+  const n=items.reduce((a,x)=>a+x.count,0);
+  if(!n)return null;
+  const t1=items.reduce((a,x)=>a+x.top1*x.count,0)/n;
+  const t10=items.reduce((a,x)=>a+x.top10*x.count,0)/n;
+  const t20=items.reduce((a,x)=>a+x.top20*x.count,0)/n;
+  const fees=items.reduce((a,x)=>a+x.fees,0);
+  const wins=items.reduce((a,x)=>a+x.wins,0);
+  const net=wins-fees;
+  return{count:n,top1:r2(t1),top10:r2(t10),top20:r2(t20),fees:r2(fees),wins:r2(wins),net:r2(net),roi:fees>0?r2(net/fees*100):0};
+}
+
+/* ── DASHBOARD ─────────────────────────────────────────── */
+function renderDashboard(){
+  const keys=Object.keys(PD);
+  const allItems=keys.map(k=>PD[k].ALL).filter(Boolean);
+  const totEnt=allItems.reduce((a,x)=>a+x.count,0);
+  const totFees=allItems.reduce((a,x)=>a+x.fees,0);
+  const totWins=allItems.reduce((a,x)=>a+x.wins,0);
+  const totNet=r2(totWins-totFees);
+  const totROI=totFees>0?r2(totNet/totFees*100):0;
+  // Process score
+  let scoreSum=0,scoreWt=0;
+  Object.keys(ED).forEach(k=>{const ed=ED[k],pd=PD[k];if(ed&&pd&&pd.ALL){scoreSum+=ed.score*pd.ALL.count;scoreWt+=pd.ALL.count;}});
+  const pScore=scoreWt>0?Math.round(scoreSum/scoreWt):0;
+  const sCol=pScore>=65?"#00d48a":pScore>=40?"#f5a320":"#ff4560";
+  const sLbl=pScore>=65?"STRONG EDGE":pScore>=40?"DEVELOPING":"BELOW BENCH";
+  // Aggregate finish rates
+  const agg=wagg(keys,"ALL");
+  const t1=agg?agg.top1:0,t10=agg?agg.top10:0,t20=agg?agg.top20:0;
+  const nCol=totNet>=0?"#00d48a":"#ff4560";
+  const rCol=totROI>=0?"#00d48a":"#ff4560";
+  const arc=2*Math.PI*28*(1-pScore/100);
+  document.getElementById("kpiRow").innerHTML=`
+    <div class="kpi-card kpi-score">
+      <div class="kpi-label">Process Score</div>
+      <div class="score-wrap">
+        <div class="score-ring">
+          <svg width="70" height="70" viewBox="0 0 70 70">
+            <circle cx="35" cy="35" r="28" fill="none" stroke="#131530" stroke-width="6"/>
+            <circle cx="35" cy="35" r="28" fill="none" stroke="${sCol}" stroke-width="6" stroke-dasharray="${2*Math.PI*28}" stroke-dashoffset="${arc}" stroke-linecap="round"/>
+          </svg>
+          <div class="score-ring-inner"><div class="score-num" style="color:${sCol}">${pScore}</div><div class="score-den">/ 100</div></div>
+        </div>
+        <div class="score-meta">
+          <div class="score-lbl">Process Score</div>
+          <div class="score-title" style="color:${sCol}">${sLbl}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:#3d4480;margin-top:4px">${totEnt.toLocaleString()} entries</div>
+        </div>
+      </div>
+    </div>
+    <div class="kpi-card ${totNet>=0?"kpi-pos":"kpi-neg"}">
+      <div class="kpi-label">Net P&amp;L (All Time)</div>
+      <div class="kpi-value" style="color:${nCol}">${totNet>=0?"+$":"−$"}${Math.abs(totNet).toFixed(0)}</div>
+      <div class="kpi-sub">$${totFees.toFixed(0)} fees · $${totWins.toFixed(0)} returned</div>
+    </div>
+    <div class="kpi-card ${totROI>=0?"kpi-pos":"kpi-neg"}">
+      <div class="kpi-label">Overall ROI</div>
+      <div class="kpi-value" style="color:${rCol}">${totROI>=0?"+":""}${totROI.toFixed(1)}%</div>
+      <div class="kpi-sub">${keys.length} sport/format combos tracked</div>
+    </div>
+    <div class="kpi-card kpi-neu">
+      <div class="kpi-label">Top 10% Finish Rate</div>
+      <div class="kpi-value" style="color:${vc(t10,BENCH.top10)}">${t10.toFixed(1)}%</div>
+      <div class="kpi-sub">Benchmark ${BENCH.top10}% · ${t10>=BENCH.top10?"✓ beating it":"✗ below it"}</div>
+    </div>`;
+  document.getElementById("entrySummary").textContent=`${totEnt.toLocaleString()} total entries · ${new Set(keys.map(k=>k.split("|")[0])).size} sports`;
+  // Finish rate bars
+  const maxes=[Math.max(t1*2,BENCH.top1*2.5,4),Math.max(t10*1.6,BENCH.top10*1.6,22),Math.max(t20*1.5,BENCH.top20*1.5,40)];
+  const rates=[{lbl:"Top 1%",val:t1,bench:BENCH.top1,max:maxes[0],col:vc(t1,BENCH.top1)},{lbl:"Top 10%",val:t10,bench:BENCH.top10,max:maxes[1],col:vc(t10,BENCH.top10)},{lbl:"Top 20%",val:t20,bench:BENCH.top20,max:maxes[2],col:vc(t20,BENCH.top20)}];
+  document.getElementById("finishRates").innerHTML=rates.map(r=>{
+    const pct=Math.min(r.val/r.max*100,100);
+    const bpct=Math.min(r.bench/r.max*100,100);
+    const d=r2(r.val-r.bench);
+    return`<div class="fr-row">
+      <div class="fr-lbl" style="color:${r.col}">${r.lbl}</div>
+      <div class="fr-track">
+        <div class="fr-fill" style="width:${pct}%;background:${r.col}"></div>
+        <div class="fr-tick" style="left:${bpct}%"></div>
+      </div>
+      <div class="fr-val" style="color:${r.col}">${r.val.toFixed(1)}%</div>
+      <div class="fr-delta" style="color:${d>=0?"#00d48a":"#ff4560"}">${d>=0?"+":""}${d.toFixed(1)}pp</div>
+    </div>`;
+  }).join("");
+  // Playbook summary counts
+  const counts={INCREASE:0,MAINTAIN:0,REDUCE:0,"SIT OUT":0};
+  Object.keys(PB).forEach(k=>{if(PB[k]&&PB[k].rec)counts[PB[k].rec]=(counts[PB[k].rec]||0)+1;});
+  document.getElementById("pbSummary").innerHTML=`
+    <div class="pbs pbs-inc"><div class="pbs-num">${counts.INCREASE||0}</div><div class="pbs-lbl">↑ Increase</div></div>
+    <div class="pbs pbs-mnt"><div class="pbs-num">${counts.MAINTAIN||0}</div><div class="pbs-lbl">→ Maintain</div></div>
+    <div class="pbs pbs-red"><div class="pbs-num">${counts.REDUCE||0}</div><div class="pbs-lbl">↓ Reduce</div></div>
+    <div class="pbs pbs-out"><div class="pbs-num">${counts["SIT OUT"]||0}</div><div class="pbs-lbl">✕ Sit Out</div></div>`;
+  // Playbook cards
+  const order={INCREASE:0,MAINTAIN:1,REDUCE:2,"SIT OUT":3};
+  const sorted=Object.keys(PB).filter(k=>PB[k]).sort((a,b)=>{
+    const ra=order[PB[a].rec]??4,rb=order[PB[b].rec]??4;
+    if(ra!==rb)return ra-rb;
+    return(ED[b]?.score||0)-(ED[a]?.score||0);
+  });
+  const rm={INCREASE:{cls:"pb-inc",ic:"pi-inc",rc:"pr-inc",icon:"↑"},MAINTAIN:{cls:"pb-mnt",ic:"pi-mnt",rc:"pr-mnt",icon:"→"},REDUCE:{cls:"pb-red",ic:"pi-red",rc:"pr-red",icon:"↓"},"SIT OUT":{cls:"pb-out",ic:"pi-out",rc:"pr-out",icon:"✕"}};
+  const cc={HIGH:"ct-high",MEDIUM:"ct-med",LOW:"ct-low",INSUFFICIENT:"ct-ins"};
+  document.getElementById("pbGrid").innerHTML=sorted.map(k=>{
+    const p=PB[k],ed=ED[k];if(!p)return"";
+    const m=rm[p.rec]||rm.MAINTAIN;
+    const[sp,fmt]=k.split("|");
+    const fc2=fmt==="Showdown"?"fmt-s":fmt==="Best Ball"?"fmt-b":"fmt-c";
+    const ref=p.ref;
+    const fp=(v,b)=>v>=b?"fp-ok":v>=b*.85?"fp-warn":"fp-bad";
+    return`<div class="pb-card ${m.cls}">
+      <div class="pb-card-top">
+        <div class="pb-head">
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;color:#fff">${sp}</span>
+            <span class="f-tag ${fc2}">${fmt}</span>
+          </div>
+          <span class="conf-tag ${cc[p.confidence]||"ct-ins"}">${p.confidence}</span>
+        </div>
+        <div class="pb-rec-row">
+          <div class="pb-icon ${m.ic}">${m.icon}</div>
+          <div class="pb-rec ${m.rc}">${p.rec}</div>
+        </div>
+        <div class="pb-reason">${p.reason}</div>
+        <div class="fp-pills">
+          <span class="fp ${fp(ref.top1,BENCH.top1)}">T1% ${ref.top1.toFixed(1)} ${ref.top1>=BENCH.top1?"✓":"✗"}</span>
+          <span class="fp ${fp(ref.top10,BENCH.top10)}">T10% ${ref.top10.toFixed(1)} ${ref.top10>=BENCH.top10?"✓":"✗"}</span>
+          <span class="fp ${fp(ref.top20,BENCH.top20)}">T20% ${ref.top20.toFixed(1)} ${ref.top20>=BENCH.top20?"✓":"✗"}</span>
+        </div>
+      </div>
+      <div class="pb-stats">
+        <div class="pb-stat"><span class="pb-stat-lbl">ROI (ref)</span><span class="pb-stat-val" style="color:${ref.roi>=0?"#00d48a":"#ff4560"}">${ref.roi>=0?"+":""}${ref.roi.toFixed(1)}%</span></div>
+        <div class="pb-stat"><span class="pb-stat-lbl">Momentum</span><span class="pb-stat-val" style="color:${p.mom>0.05?"#00d48a":p.mom<-0.05?"#ff4560":"#7880b8"}">${p.mom>0.05?"↑ improving":p.mom<-0.05?"↓ declining":"→ flat"}</span></div>
+        ${ed?`<div class="pb-stat"><span class="pb-stat-lbl">Edge Score</span><span class="pb-stat-val">${ed.score}/100</span></div>`:""}
+        <div class="pb-stat"><span class="pb-stat-lbl">Sample</span><span class="pb-stat-val" style="color:#7880b8">${ref.count.toLocaleString()} entries</span></div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ── PERFORMANCE ───────────────────────────────────────── */
+function renderPerformance(){
+  const keys=perfKeys();
+  if(!keys.length){document.getElementById("perfTable").innerHTML=`<div class="no-data">No data for current filters</div>`;renderFieldTable();renderStakeTable();return;}
+  const win=PWIN;
+  const rows=keys.map(k=>{
+    const d=PD[k][win];if(!d)return null;
+    const[sp,fmt]=k.split("|");
+    return{k,sp,fmt,d,ed:ED[k]};
+  }).filter(Boolean).sort((a,b)=>(b.ed?.score||0)-(a.ed?.score||0));
+  if(!rows.length){document.getElementById("perfTable").innerHTML=`<div class="no-data">No data for this time window — try a wider window</div>`;}
+  else{
+    document.getElementById("perfTable").innerHTML=`<table class="perf-tbl">
+      <thead><tr><th>Sport / Format</th><th class="r">Entries</th><th>Finish Rates vs Benchmark</th><th class="r">ROI</th><th class="r">Net</th><th class="r">Score</th></tr></thead>
+      <tbody>${rows.map(({sp,fmt,d,ed})=>{
+        const t1c=vc(d.top1,BENCH.top1),t10c=vc(d.top10,BENCH.top10),t20c=vc(d.top20,BENCH.top20);
+        const sb=!ed?"sb-lo":ed.score>=65?"sb-hi":ed.score>=40?"sb-md":ed.score>=25?"sb-lo":"sb-vl";
+        return`<tr>
+          <td><div class="s-cell">${sl(sp)}${fc(fmt)}</div></td>
+          <td style="text-align:right" class="v-mut">${d.count.toLocaleString()}</td>
+          <td><div class="fr-mini-rows">
+            <div class="fr-mini"><span class="fr-mini-lbl">T1%</span><div class="fr-mini-track"><div class="fr-mini-fill" style="width:${Math.min(d.top1/3*100,100)}%;background:${t1c}"></div></div><span class="fr-mini-val" style="color:${t1c}">${d.top1.toFixed(1)}%</span></div>
+            <div class="fr-mini"><span class="fr-mini-lbl">T10%</span><div class="fr-mini-track"><div class="fr-mini-fill" style="width:${Math.min(d.top10/24*100,100)}%;background:${t10c}"></div></div><span class="fr-mini-val" style="color:${t10c}">${d.top10.toFixed(1)}%</span></div>
+            <div class="fr-mini"><span class="fr-mini-lbl">T20%</span><div class="fr-mini-track"><div class="fr-mini-fill" style="width:${Math.min(d.top20/48*100,100)}%;background:${t20c}"></div></div><span class="fr-mini-val" style="color:${t20c}">${d.top20.toFixed(1)}%</span></div>
+          </div></td>
+          <td style="text-align:right"><span class="${d.roi>=0?"v-pos":"v-neg"}">${d.roi>=0?"+":""}${d.roi.toFixed(1)}%</span></td>
+          <td style="text-align:right"><span class="${d.net>=0?"v-pos":"v-neg"}">${d.net>=0?"+$":"-$"}${Math.abs(d.net).toFixed(0)}</span></td>
+          <td style="text-align:right"><span class="score-badge ${sb}">${ed?ed.score:"—"}</span></td>
+        </tr>`;
+      }).join("")}</tbody></table>`;
+  }
+  renderFieldTable();renderStakeTable();
+}
+
+function renderFieldTable(){
+  const keys=perfKeys();
+  const BCL={small:"blbl-sm",medium:"blbl-md",large:"blbl-lg"};
+  const BLB={small:"SMALL",medium:"MEDIUM",large:"LARGE"};
+  let rows="";
+  keys.forEach(k=>{
+    const fd=FD[k];if(!fd)return;
+    const[sp,fmt]=k.split("|");
+    ["small","medium","large"].forEach(b=>{
+      const d=fd[b];if(!d)return;
+      rows+=`<tr><td><div class="s-cell">${sl(sp)}${fc(fmt)}</div></td><td><span class="blbl ${BCL[b]}">${BLB[b]}</span></td><td style="text-align:right" class="v-mut">${d.count.toLocaleString()}</td><td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:${vc(d.top1,BENCH.top1)}">${d.top1.toFixed(1)}%</td><td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:${vc(d.top10,BENCH.top10)}">${d.top10.toFixed(1)}%</td><td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:${vc(d.top20,BENCH.top20)}">${d.top20.toFixed(1)}%</td></tr>`;
+    });
+  });
+  document.getElementById("fieldTable").innerHTML=rows?`<table class="perf-tbl"><thead><tr><th>Sport</th><th>Field</th><th class="r">Entries</th><th class="r">Top 1%</th><th class="r">Top 10%</th><th class="r">Top 20%</th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="no-data">No field data — add # Teams column to CSV</div>`;
+}
+
+function renderStakeTable(){
+  const keys=perfKeys();
+  const TCL={penny:"blbl-pn",low:"blbl-lo",mid:"blbl-mi",high:"blbl-hi"};
+  const TLB={penny:"PENNY",low:"LOW",mid:"MID",high:"HIGH"};
+  let rows="";
+  keys.forEach(k=>{
+    const sd=SD[k];if(!sd)return;
+    const[sp,fmt]=k.split("|");
+    ["penny","low","mid","high"].forEach(t=>{
+      const d=sd[t];if(!d)return;
+      rows+=`<tr><td><div class="s-cell">${sl(sp)}${fc(fmt)}</div></td><td><span class="blbl ${TCL[t]}">${TLB[t]}</span></td><td style="text-align:right" class="v-mut">${d.count.toLocaleString()}</td><td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:${vc(d.top1,BENCH.top1)}">${d.top1.toFixed(1)}%</td><td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:${vc(d.top10,BENCH.top10)}">${d.top10.toFixed(1)}%</td><td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:${vc(d.top20,BENCH.top20)}">${d.top20.toFixed(1)}%</td></tr>`;
+    });
+  });
+  document.getElementById("stakeTable").innerHTML=rows?`<table class="perf-tbl"><thead><tr><th>Sport</th><th>Stake</th><th class="r">Entries</th><th class="r">Top 1%</th><th class="r">Top 10%</th><th class="r">Top 20%</th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="no-data">No stake data — add Entry Fee column to CSV</div>`;
+}
+
+/* ── TRENDS ────────────────────────────────────────────── */
+function renderMonthly(){
+  const keys=Object.keys(PD).filter(k=>{const[sp]=k.split("|");return SP.has("ALL")||SP.has(sp);});
+  const mData={};
+  keys.forEach(k=>{(MD[k]||[]).forEach(m=>{if(!mData[m.month])mData[m.month]={top1:0,top10:0,top20:0,count:0};mData[m.month].top1+=m.top1*m.count;mData[m.month].top10+=m.top10*m.count;mData[m.month].top20+=m.top20*m.count;mData[m.month].count+=m.count;});});
+  const months=Object.keys(mData).sort();
+  const ser=months.map(m=>{const d=mData[m];if(!d||!d.count)return null;return{top1:r2(d.top1/d.count),top10:r2(d.top10/d.count),top20:r2(d.top20/d.count)};});
+  const rk=AR,bn=BENCH[rk];
+  const vals=ser.map(s=>s?s[rk]:null);
+  const rc=rk==="top1"?"#ff4560":rk==="top10"?"#f5a320":"#9b6dff";
+  if(_mChart){_mChart.destroy();_mChart=null;}
+  const ctx=document.getElementById("monthlyChart").getContext("2d");
+  _mChart=new Chart(ctx,{type:"line",data:{labels:months,datasets:[{label:rk==="top1"?"Top 1%":rk==="top10"?"Top 10%":"Top 20%",data:vals,borderColor:rc,backgroundColor:rc+"22",borderWidth:2,pointRadius:vals.map(v=>v!==null?4:0),pointBackgroundColor:vals.map((v,i)=>v!==null?(v>=bn?"#00d48a":"#ff4560"):rc),pointBorderColor:"#08091a",pointBorderWidth:2,tension:.35,fill:true,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{afterBody(i){const p=ser[i[0].dataIndex];if(!p)return[];const d=p[rk]-bn;return["",`bench ${bn}%  →  ${p[rk]>=bn?"✓ ABOVE":"✗ BELOW"}  (${d>=0?"+":""}${d.toFixed(2)}pp)`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{min:0,ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(1)+"%"},grid:{color:"#1c2044"}}}},plugins:[{id:"bl",afterDraw(chart){const{ctx,chartArea:{left,right},scales:{y}}=chart;if(!y)return;const yp=y.getPixelForValue(bn);ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle=rc;ctx.lineWidth=1.5;ctx.globalAlpha=.5;ctx.beginPath();ctx.moveTo(left,yp);ctx.lineTo(right,yp);ctx.stroke();ctx.font="9px IBM Plex Mono";ctx.fillStyle=rc;ctx.globalAlpha=.75;ctx.fillText("bench "+bn+"%",right-82,yp-4);ctx.restore();}}]});
+}
+
+function renderQuadrant(){
+  const keys=Object.keys(ED).filter(k=>{const[sp]=k.split("|");return SP.has("ALL")||SP.has(sp);});
+  if(_qChart){_qChart.destroy();_qChart=null;}
+  const ctx=document.getElementById("quadrantChart").getContext("2d");
+  const pts=keys.map(k=>{
+    const ed=ED[k],mo=MOD[k],pd=PD[k];if(!ed||!mo||!pd)return null;
+    const ref=pd.T6M||pd.T12M||pd.ALL;if(!ref||!ref.count)return null;
+    const x=ed.b10_delta;
+    const y=r2((mo.slope1||0)*.5+(mo.slope10||0)*.3+(mo.slope20||0)*.2);
+    const r=Math.max(6,Math.min(26,Math.sqrt(ref.count)*.55));
+    const ok=x>=0,imp=y>0.05;
+    const col=ok&&imp?"rgba(0,212,138,.7)":ok&&!imp?"rgba(245,163,32,.7)":!ok&&imp?"rgba(77,143,255,.7)":"rgba(255,69,96,.7)";
+    const bcol=ok&&imp?"#00d48a":ok&&!imp?"#f5a320":!ok&&imp?"#4d8fff":"#ff4560";
+    return{x,y,r,col,bcol,k};
+  }).filter(Boolean);
+  _qChart=new Chart(ctx,{type:"bubble",data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.col),borderColor:pts.map(p=>p.bcol),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(i){return pts[i[0].dataIndex]?.k||"";},label(i){const p=pts[i.dataIndex];return[`delta: ${p.x>=0?"+":""}${p.x.toFixed(2)}pp  mom: ${p.y>=0?"+":""}${p.y.toFixed(2)}`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(1)+"pp"},grid:{color:"#1c2044"},title:{display:true,text:"vs Benchmark (pp)",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Momentum",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}}}},plugins:[{id:"q",afterDraw(chart){const{ctx,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;if(!x||!y)return;const cx=x.getPixelForValue(0),cy=y.getPixelForValue(0);ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(255,255,255,.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(right,cy);ctx.stroke();ctx.restore();}}]});
+}
+
+function renderEdgeChart(){
+  const keys=Object.keys(ED).filter(k=>{const[sp]=k.split("|");return SP.has("ALL")||SP.has(sp);}).sort((a,b)=>(ED[b]?.score||0)-(ED[a]?.score||0)).slice(0,15);
+  if(_eChart){_eChart.destroy();_eChart=null;}
+  const ctx=document.getElementById("edgeChart").getContext("2d");
+  _eChart=new Chart(ctx,{type:"bar",data:{labels:keys.map(k=>k.replace("|"," ")),datasets:[{label:"Benchmark",data:keys.map(k=>ED[k]?.bench_component||0),backgroundColor:"rgba(77,143,255,.75)",borderRadius:3},{label:"Trend",data:keys.map(k=>ED[k]?.trend_component||0),backgroundColor:"rgba(0,212,138,.75)",borderRadius:3},{label:"Confidence",data:keys.map(k=>ED[k]?.confidence_component||0),backgroundColor:"rgba(155,109,255,.75)",borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"},boxWidth:10}},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{max:100,ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}}}}});
+}
+
+/* ── P&L ───────────────────────────────────────────────── */
+function renderPnl(){
+  const keys=Object.keys(PNL).filter(k=>{const[sp,fm]=k.split("|");return(SP.has("ALL")||SP.has(sp))&&(PFM==="ALL"||fm===PFM);});
+  const tF=keys.reduce((a,k)=>a+PNL[k].fees,0);
+  const tW=keys.reduce((a,k)=>a+PNL[k].wins,0);
+  const tN=r2(tW-tF);
+  const tR=tF>0?r2(tN/tF*100):0;
+  const tC=keys.reduce((a,k)=>a+PNL[k].count,0);
+  document.getElementById("pnlKpi").innerHTML=`
+    <div class="kpi-card kpi-neu"><div class="kpi-label">Total Fees Paid</div><div class="kpi-value" style="color:#ff4560">$${tF.toFixed(0)}</div><div class="kpi-sub">${tC.toLocaleString()} contest entries</div></div>
+    <div class="kpi-card kpi-neu"><div class="kpi-label">Total Returned</div><div class="kpi-value" style="color:#4d8fff">$${tW.toFixed(0)}</div><div class="kpi-sub">Prize winnings</div></div>
+    <div class="kpi-card ${tN>=0?"kpi-pos":"kpi-neg"}"><div class="kpi-label">Net P&amp;L</div><div class="kpi-value" style="color:${tN>=0?"#00d48a":"#ff4560"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</div><div class="kpi-sub">${tN>=0?"Profitable":"Net loss"} overall</div></div>
+    <div class="kpi-card ${tR>=0?"kpi-pos":"kpi-neg"}"><div class="kpi-label">Return on Investment</div><div class="kpi-value" style="color:${tR>=0?"#00d48a":"#ff4560"}">${tR>=0?"+":""}${tR.toFixed(1)}%</div><div class="kpi-sub">Fees in vs prizes out</div></div>`;
+  let rows;
+  if(PNL_VIEW==="sport"){
+    const sp={};keys.forEach(k=>{const d=PNL[k],s=d.sport;if(!sp[s])sp[s]={sport:s,count:0,fees:0,wins:0};sp[s].count+=d.count;sp[s].fees+=d.fees;sp[s].wins+=d.wins;});
+    rows=Object.values(sp).map(d=>({...d,net:r2(d.wins-d.fees),roi:d.fees>0?r2((d.wins-d.fees)/d.fees*100):0}));
+  } else {
+    rows=keys.map(k=>({...PNL[k],net:r2(PNL[k].wins-PNL[k].fees),roi:PNL[k].fees>0?r2((PNL[k].wins-PNL[k].fees)/PNL[k].fees*100):0}));
+  }
+  rows.sort((a,b)=>b[PNL_SORT.col]*PNL_SORT.dir-a[PNL_SORT.col]*PNL_SORT.dir);
+  const mxN=Math.max(...rows.map(r=>Math.abs(r.net)),1);
+  const th=(col,lbl)=>`<th class="r" style="${PNL_SORT.col===col?"color:#4d8fff":""}" onclick="PNL_SORT={col:'${col}',dir:PNL_SORT.col==='${col}'?-PNL_SORT.dir:-1};renderPnl()">${lbl}${PNL_SORT.col===col?(PNL_SORT.dir>0?" ↑":" ↓"):""}</th>`;
+  document.getElementById("pnlTable").innerHTML=`<table class="pnl-tbl">
+    <thead><tr><th>${PNL_VIEW==="sport"?"Sport":"Sport / Format"}</th>${th("count","Entries")}${th("fees","Fees")}${th("wins","Returned")}${th("net","Net P&L")}${th("roi","ROI")}</tr></thead>
+    <tbody>
+    ${rows.map(r=>`<tr><td><div class="s-cell">${sl(r.sport)}${r.format?fc(r.format):""}</div></td><td style="text-align:right" class="v-mut">${r.count.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${r.fees.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${r.wins.toFixed(0)}</td><td><div class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:${Math.abs(r.net)/mxN*100}%;background:${r.net>=0?"#00d48a":"#ff4560"}"></div></div><span class="${r.net>=0?"v-pos":"v-neg"}">${r.net>=0?"+$":"-$"}${Math.abs(r.net).toFixed(0)}</span></div></td><td style="text-align:right"><span class="${r.roi>=0?"v-pos":"v-neg"}">${r.roi>=0?"+":""}${r.roi.toFixed(1)}%</span></td></tr>`).join("")}
+    <tr class="total-row"><td><strong>TOTAL</strong></td><td style="text-align:right" class="v-mut">${tC.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${tF.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${tW.toFixed(0)}</td><td><div class="bar-cell"><span class="${tN>=0?"v-pos":"v-neg"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</span></div></td><td style="text-align:right"><span class="${tR>=0?"v-pos":"v-neg"}">${tR>=0?"+":""}${tR.toFixed(1)}%</span></td></tr>
+    </tbody></table>`;
+  // P&L chart
+  if(_pChart){_pChart.destroy();_pChart=null;}
+  const sn={};keys.forEach(k=>{const[sp]=k.split("|");sn[sp]=(sn[sp]||0)+PNL[k].wins-PNL[k].fees;});
+  const sps=Object.keys(sn).sort((a,b)=>sn[b]-sn[a]);
+  const ctx=document.getElementById("pnlChart").getContext("2d");
+  _pChart=new Chart(ctx,{type:"bar",data:{labels:sps,datasets:[{label:"Net P&L",data:sps.map(s=>r2(sn[s])),backgroundColor:sps.map(s=>sn[s]>=0?"rgba(0,212,138,.75)":"rgba(255,69,96,.75)"),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return`Net: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}}});
+}
+
+/* ── RENDER + EVENTS ───────────────────────────────────── */
+function render(){renderDashboard();renderPerformance();renderMonthly();renderQuadrant();renderEdgeChart();renderPnl();}
+
+document.querySelectorAll(".nav-tab").forEach(t=>{t.addEventListener("click",()=>{const id=t.dataset.tab;document.querySelectorAll(".nav-tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(x=>x.classList.remove("active"));t.classList.add("active");document.getElementById("tab-"+id).classList.add("active");});});
+
+document.getElementById("perfWin").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PWIN=b.dataset.win;document.querySelectorAll("#perfWin .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPerformance();});
+
+document.getElementById("perfSport").addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;const s=c.dataset.sport;if(s==="ALL"){SP=new Set(["ALL"]);}else{SP.delete("ALL");SP.has(s)?SP.delete(s):SP.add(s);if(!SP.size)SP.add("ALL");}document.querySelectorAll("#perfSport .chip").forEach(x=>{x.className="chip"+(SP.has(x.dataset.sport)?" on":"");});renderPerformance();});
+
+document.getElementById("perfFmt").addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;PFM=c.dataset.fmt;document.querySelectorAll("#perfFmt .chip").forEach(x=>{let cl="chip";if(x.dataset.fmt===PFM)cl+=PFM==="Classic"?" on-c":PFM==="Showdown"?" on-s":" on";x.className=cl;});renderPerformance();});
+
+document.getElementById("rateToggle").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;AR=b.dataset.rate;document.querySelectorAll("#rateToggle .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderMonthly();});
+
+document.getElementById("pnlView").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_VIEW=b.dataset.view;document.querySelectorAll("#pnlView .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
+
 
 /* ── CSV UPLOAD ENGINE ─────────────────────────────────── */
 (function(){
