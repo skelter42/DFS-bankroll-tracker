@@ -1558,7 +1558,7 @@ document.getElementById("rateToggle").addEventListener("click",e=>{
   }
 
   function computeAll(entries){
-    const now=Math.max(...entries.map(e=>e.dateMs));
+    const now=entries.reduce((a,e)=>e.dateMs>a?e.dateMs:a,0);
     const T1=now-30*24*3600*1000,T6=now-182*24*3600*1000,T12=now-365*24*3600*1000;
     const groups={};
     entries.forEach(e=>{const k=e.sport+"|"+e.format;if(!groups[k])groups[k]=[];groups[k].push(e);});
@@ -1662,8 +1662,10 @@ document.getElementById("rateToggle").addEventListener("click",e=>{
     const status=document.getElementById("csvStatus");
     status.className="csv-status";status.textContent="";
     if(!file||!file.name.endsWith(".csv")){status.className="csv-status err";status.textContent="Please select a .csv file.";return;}
+    status.className="csv-status";status.textContent="Processing…";
     const reader=new FileReader();
     reader.onload=function(e){
+      try{
       const rows=parseCSVText(e.target.result);
       if(rows.error){status.className="csv-status err";status.textContent="Error: "+rows.error;return;}
       if(!rows.length){status.className="csv-status err";status.textContent="No valid entries found. Check column names and sport values.";return;}
@@ -1674,7 +1676,9 @@ document.getElementById("rateToggle").addEventListener("click",e=>{
       status.className="csv-status ok";
       status.textContent="✓ Loaded "+rows.length.toLocaleString()+" entries across "+keys+" sport/format combos."+(hasField?"":" Tip: add a '# Teams' column for top% finish rates.");
       document.getElementById("csvReset").style.display="inline-block";
+      }catch(err){status.className="csv-status err";status.textContent="Error processing file: "+err.message;}
     };
+    reader.onerror=function(){status.className="csv-status err";status.textContent="Failed to read file.";};
     reader.readAsText(file);
   }
 
