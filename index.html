@@ -247,7 +247,28 @@ header,.filters,.tabs,.main{padding-left:16px;padding-right:16px;}
 .cb-winpct{font-size:.63rem;color:var(–mu2);}
 .cb-best-badge{display:inline-block;font-family:“IBM Plex Mono”,monospace;font-size:.55rem;padding:1px 5px;border-radius:2px;background:rgba(5,216,158,.12);color:var(–gr);border:1px solid rgba(5,216,158,.2);margin-left:4px;vertical-align:middle;}
 .cb-filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
-.cb-sort-lbl{font-family:“IBM Plex Mono”,monospace;font-size:.62rem;color:var(–mu);text-transform:uppercase;letter-spacing:.8px;}
+.cb-sort-lbl{font-family:”IBM Plex Mono”,monospace;font-size:.62rem;color:var(–mu);text-transform:uppercase;letter-spacing:.8px;}
+.csv-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:5px;border:1px solid rgba(77,135,255,.35);background:rgba(77,135,255,.08);color:var(--bl);font-family:”IBM Plex Mono”,monospace;font-size:0.72rem;cursor:pointer;transition:all .15s;}
+.csv-btn:hover{background:rgba(77,135,255,.16);border-color:rgba(77,135,255,.6);}
+.csv-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center;}
+.csv-overlay.open{display:flex;}
+.csv-modal{background:var(--surf);border:1px solid var(--b2);border-radius:12px;padding:28px;max-width:520px;width:90%;display:flex;flex-direction:column;gap:16px;}
+.csv-modal h2{font-family:”Syne”,sans-serif;font-size:1.1rem;font-weight:800;color:#fff;}
+.csv-drop{border:2px dashed var(--b3);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .15s;}
+.csv-drop:hover,.csv-drop.drag{border-color:var(--bl);background:rgba(77,135,255,.05);}
+.csv-drop-icon{font-size:2rem;margin-bottom:8px;}
+.csv-drop-lbl{font-family:”IBM Plex Mono”,monospace;font-size:0.75rem;color:var(--mu2);}
+.csv-drop-sub{font-family:”IBM Plex Mono”,monospace;font-size:0.62rem;color:var(--mu);margin-top:5px;}
+.csv-info{background:var(--s2);border-radius:6px;padding:12px 14px;font-family:”IBM Plex Mono”,monospace;font-size:0.65rem;color:var(--mu2);line-height:1.7;}
+.csv-info strong{color:var(--bl);}
+.csv-status{font-family:”IBM Plex Mono”,monospace;font-size:0.72rem;padding:8px 12px;border-radius:5px;display:none;}
+.csv-status.ok{background:rgba(5,216,158,.1);color:var(--gr);border:1px solid rgba(5,216,158,.25);display:block;}
+.csv-status.err{background:rgba(240,62,92,.1);color:var(--re);border:1px solid rgba(240,62,92,.25);display:block;}
+.csv-btns{display:flex;gap:8px;justify-content:flex-end;}
+.csv-close{padding:6px 16px;border-radius:5px;border:1px solid var(--b2);background:transparent;color:var(--mu2);font-family:”IBM Plex Mono”,monospace;font-size:0.72rem;cursor:pointer;}
+.csv-close:hover{color:var(--tx);}
+.csv-reset{padding:6px 16px;border-radius:5px;border:1px solid rgba(240,62,92,.3);background:rgba(240,62,92,.06);color:var(--re);font-family:”IBM Plex Mono”,monospace;font-size:0.72rem;cursor:pointer;display:none;}
+.csv-reset:hover{background:rgba(240,62,92,.12);}
 </style>
 </head>
 <body><header>
@@ -260,9 +281,32 @@ header,.filters,.tabs,.main{padding-left:16px;padding-right:16px;}
       <div class="bp bp1"><div class="bpdot" style="background:var(--c1)"></div>Top 1% → 1.2%</div>
       <div class="bp bp10"><div class="bpdot" style="background:var(--c10)"></div>Top 10% → 12%</div>
       <div class="bp bp20"><div class="bpdot" style="background:var(--c20)"></div>Top 20% → 24%</div>
+      <button class="csv-btn" id="csvOpenBtn">⬆ Upload CSV</button>
     </div>
   </div>
-</header><div class="filters">
+</header>
+<div class="csv-overlay" id="csvOverlay">
+  <div class="csv-modal">
+    <h2>Import DraftKings CSV</h2>
+    <div class="csv-drop" id="csvDrop">
+      <div class="csv-drop-icon">📂</div>
+      <div class="csv-drop-lbl">Click to select or drag &amp; drop your CSV</div>
+      <div class="csv-drop-sub">DraftKings contest history export · My Contests → Download</div>
+      <input type="file" accept=".csv,text/csv" id="csvFile" style="display:none">
+    </div>
+    <div class="csv-info">
+      <strong>Required columns:</strong> Sport, Date, Place, Winnings<br>
+      <strong>Recommended:</strong> Entry Fee, # Teams (enables full stats)<br>
+      <strong>Format detection:</strong> Contest Name column (Showdown / Best Ball / Classic)
+    </div>
+    <div class="csv-status" id="csvStatus"></div>
+    <div class="csv-btns">
+      <button class="csv-reset" id="csvReset">Reset to Original Data</button>
+      <button class="csv-close" id="csvClose">Close</button>
+    </div>
+  </div>
+</div>
+<div class="filters">
   <div class="frow">
     <span class="flbl">Sport <span style="font-size:.55rem;opacity:.6;text-transform:none;letter-spacing:0">(multi)</span></span>
     <div class="chips" id="sportChips">
@@ -1413,6 +1457,237 @@ document.getElementById("rateToggle").addEventListener("click",e=>{
   document.querySelectorAll(".ptb").forEach(x=>x.classList.toggle("active",x===b));
   renderMonthly();
 });
+
+/* ── CSV UPLOAD ENGINE ─────────────────────────────────── */
+(function(){
+  const SPORT_MAP={
+    "nba":"NBA","nfl":"NFL","mlb":"MLB","nhl":"NHL",
+    "pga":"GOLF","golf":"GOLF","lpga":"GOLF",
+    "ufc":"MMA","mma":"MMA",
+    "nascar":"NAS","nas":"NAS",
+    "lol":"LOL","league of legends":"LOL",
+    "csgo":"CS","cs:go":"CS","cs":"CS","counter-strike":"CS",
+    "call of duty":"COD","cod":"COD",
+    "f1":"F1","formula 1":"F1","formula one":"F1",
+    "soccer":"SOC","soc":"SOC",
+    "cfb":"CFB","college football":"CFB",
+    "cbb":"CBB","college basketball":"CBB",
+    "ufl":"UFL","tennis":"TEN","ten":"TEN"
+  };
+  function normSport(s){if(!s)return null;return SPORT_MAP[s.trim().toLowerCase()]||null;}
+  function detectFormat(name){
+    if(!name)return"Classic";
+    const l=name.toLowerCase();
+    if(l.includes("showdown")||l.includes("captain mode"))return"Showdown";
+    if(l.includes("best ball")||l.includes("bestball"))return"Best Ball";
+    return"Classic";
+  }
+  function feeToTier(f){return f<=0.25?"penny":f<=2?"low":f<=5?"mid":"high";}
+  function fieldToSize(n){return n<500?"small":n<=5000?"medium":"large";}
+  function r2(v){return Math.round(v*100)/100;}
+
+  function parseCSVText(text){
+    const lines=text.trim().split(/\r?\n/);
+    if(lines.length<2)return[];
+    const delim=lines[0].includes("\t")?"\t":",";
+    function splitLine(line){
+      const out=[];let cur="",inQ=false;
+      for(let i=0;i<line.length;i++){
+        const c=line[i];
+        if(c==='"'){inQ=!inQ;}else if(c===delim&&!inQ){out.push(cur.trim());cur="";}else cur+=c;
+      }
+      out.push(cur.trim());return out;
+    }
+    const headers=splitLine(lines[0]).map(h=>h.replace(/^"|"$/g,"").trim().toLowerCase());
+    const col=(...ns)=>ns.reduce((a,n)=>{const i=headers.findIndex(h=>h.includes(n));return i>=0&&a<0?i:a;},-1);
+    const iSport=col("sport");
+    const iDate=col("contest date est","contest date","date");
+    const iPlace=col("place","finish","rank");
+    const iWin=col("winnings","winning","prize");
+    const iFee=col("entry fee","fee","buy-in");
+    const iTeams=col("# teams","teams","# entries","entries","total teams","total entries","field");
+    const iName=col("contest name","contest","name");
+    if(iSport<0||iDate<0||iPlace<0||iWin<0){
+      return{error:"Missing required columns. Need: Sport, Date, Place, Winnings."};
+    }
+    const rows=[];
+    for(let i=1;i<lines.length;i++){
+      const cells=splitLine(lines[i]);if(cells.length<3)continue;
+      const g=idx=>idx>=0?(cells[idx]||"").replace(/^"|"$/g,"").trim():"";
+      const sport=normSport(g(iSport));if(!sport)continue;
+      const rawDate=g(iDate);
+      const dp=rawDate.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})|(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+      if(!dp)continue;
+      let year,month;
+      if(dp[1]){year=parseInt(dp[1]);month=parseInt(dp[2]);}
+      else{const y=parseInt(dp[6]);year=y<100?(y>50?1900+y:2000+y):y;month=parseInt(dp[4]);}
+      const ym=year+"-"+String(month).padStart(2,"0");
+      const dateMs=new Date(year,month-1,1).getTime();
+      const place=parseInt(g(iPlace))||0;
+      const winnings=parseFloat(g(iWin).replace(/[$,]/g,""))||0;
+      const contestName=g(iName);
+      const format=detectFormat(contestName);
+      let fee=0;
+      if(iFee>=0){fee=parseFloat(g(iFee).replace(/[$,]/g,""))||0;}
+      else if(contestName){const m=contestName.match(/\$(\d+(?:\.\d+)?)/);if(m)fee=parseFloat(m[1]);}
+      const totalTeams=iTeams>=0?parseInt(g(iTeams).replace(/,/g,""))||0:0;
+      rows.push({sport,format,ym,dateMs,place,winnings,fee,totalTeams});
+    }
+    return rows;
+  }
+
+  function buildWindow(entries,cutoffMs){
+    const sub=cutoffMs===-Infinity?entries:entries.filter(e=>e.dateMs>=cutoffMs);
+    if(!sub.length)return null;
+    const n=sub.length;
+    const fees=r2(sub.reduce((a,e)=>a+e.fee,0));
+    const wins=r2(sub.reduce((a,e)=>a+e.winnings,0));
+    const net=r2(wins-fees);const roi=fees>0?r2(net/fees*100):0;
+    const hasField=sub.some(e=>e.totalTeams>0);
+    let top1=0,top10=0,top20=0;
+    if(hasField){
+      const valid=sub.filter(e=>e.totalTeams>0&&e.place>0);
+      if(valid.length){
+        const t=valid.length;
+        top1=r2(valid.filter(e=>e.place/e.totalTeams<=0.01).length/t*100);
+        top10=r2(valid.filter(e=>e.place/e.totalTeams<=0.10).length/t*100);
+        top20=r2(valid.filter(e=>e.place/e.totalTeams<=0.20).length/t*100);
+      }
+    }
+    return{count:n,fees,wins,net,roi,top1,top10,top20};
+  }
+
+  function computeAll(entries){
+    const now=Math.max(...entries.map(e=>e.dateMs));
+    const T1=now-30*24*3600*1000,T6=now-182*24*3600*1000,T12=now-365*24*3600*1000;
+    const groups={};
+    entries.forEach(e=>{const k=e.sport+"|"+e.format;if(!groups[k])groups[k]=[];groups[k].push(e);});
+    const nPD={},nMD={},nSD={},nFD={},nPNL={};
+    Object.keys(groups).forEach(k=>{
+      const g=groups[k];
+      nPD[k]={T1M:buildWindow(g,T1),T6M:buildWindow(g,T6),T12M:buildWindow(g,T12),ALL:buildWindow(g,-Infinity)};
+      const byM={};g.forEach(e=>{if(!byM[e.ym])byM[e.ym]=[];byM[e.ym].push(e);});
+      nMD[k]=Object.keys(byM).sort().map(m=>{
+        const sub=byM[m];const n=sub.length;
+        const valid=sub.filter(e=>e.totalTeams>0&&e.place>0);const t=valid.length;
+        return{month:m,count:n,
+          top1:t?r2(valid.filter(e=>e.place/e.totalTeams<=0.01).length/t*100):0,
+          top10:t?r2(valid.filter(e=>e.place/e.totalTeams<=0.10).length/t*100):0,
+          top20:t?r2(valid.filter(e=>e.place/e.totalTeams<=0.20).length/t*100):0};
+      });
+      const tiers={penny:[],low:[],mid:[],high:[]};
+      g.forEach(e=>tiers[feeToTier(e.fee)].push(e));
+      nSD[k]={};Object.keys(tiers).forEach(t=>{if(tiers[t].length)nSD[k][t]=buildWindow(tiers[t],-Infinity);});
+      const sizes={small:[],medium:[],large:[]};
+      g.forEach(e=>{if(e.totalTeams>0)sizes[fieldToSize(e.totalTeams)].push(e);});
+      nFD[k]={};Object.keys(sizes).forEach(s=>{if(sizes[s].length)nFD[k][s]=buildWindow(sizes[s],-Infinity);});
+      const all=nPD[k].ALL;const[sp,fmt]=k.split("|");
+      if(all)nPNL[k]={sport:sp,format:fmt,count:all.count,fees:all.fees,wins:all.wins,net:all.net,roi:all.roi};
+    });
+    const nMOD={};
+    Object.keys(nMD).forEach(k=>{
+      const months=nMD[k].slice(-6);
+      if(months.length<2){nMOD[k]={slope1:0,slope10:0,slope20:0,months:months.length,n:(nPD[k].ALL||{}).count||0};return;}
+      function slope(arr,key){
+        const n=arr.length,xs=arr.map((_,i)=>i),ys=arr.map(m=>m[key]);
+        const mx=xs.reduce((a,v)=>a+v,0)/n,my=ys.reduce((a,v)=>a+v,0)/n;
+        const num=xs.reduce((a,x,i)=>a+(x-mx)*(ys[i]-my),0),den=xs.reduce((a,x)=>a+(x-mx)*(x-mx),0);
+        return den===0?0:r2(num/den);
+      }
+      nMOD[k]={slope1:slope(months,"top1"),slope10:slope(months,"top10"),slope20:slope(months,"top20"),months:months.length,n:(nPD[k].ALL||{}).count||0};
+    });
+    const BENCH_={top1:1.2,top10:12,top20:24};
+    const nED={};
+    Object.keys(nPD).forEach(k=>{
+      const pd=nPD[k],mo=nMOD[k],ref=pd.T6M||pd.T12M||pd.ALL;
+      if(!ref||!ref.count)return;
+      const b1=r2(ref.top1-BENCH_.top1),b10=r2(ref.top10-BENCH_.top10),b20=r2(ref.top20-BENCH_.top20);
+      const comp=(b1*0.5+b10*0.1+b20*0.05)/0.65;
+      const bc=r2(Math.max(0,Math.min(50,comp*5+25)));
+      const sl=mo?((mo.slope1||0)*0.5+(mo.slope10||0)*0.3+(mo.slope20||0)*0.2):0;
+      const tc=r2(Math.max(0,Math.min(25,sl*5+12.5)));
+      const cc=r2(Math.min(25,ref.count/100*25));
+      nED[k]={score:Math.round(bc+tc+cc),bench_component:bc,trend_component:tc,confidence_component:cc,b1_delta:b1,b10_delta:b10,b20_delta:b20};
+    });
+    const nPB={};
+    Object.keys(nPD).forEach(k=>{
+      const[sp,fmt]=k.split("|"),pd=nPD[k],ed=nED[k],mo=nMOD[k];
+      const ref=pd.T6M||pd.T12M||pd.ALL;if(!ref)return;
+      const t1m=pd.T1M;
+      const d1=ed?ed.b1_delta:-1.2,d10=ed?ed.b10_delta:-12,d20=ed?ed.b20_delta:-24;
+      const mom=mo?r2((mo.slope1||0)*0.5+(mo.slope10||0)*0.3+(mo.slope20||0)*0.2):0;
+      const cd=r2((d1*0.5+d10*0.1+d20*0.05)/0.65);
+      const beating=d10>=0,improving=mom>0.05;
+      let rec,reason;
+      if(d10<-3&&!improving){rec="SIT OUT";reason="Significantly below benchmarks and getting worse";}
+      else if(beating&&improving){rec="INCREASE";reason="Beating benchmarks with stable or improving trend";}
+      else if(beating){rec=mom<-0.1?"REDUCE":"MAINTAIN";reason=mom<-0.1?"Below benchmarks with declining momentum":"Above benchmarks \u2014 hold current exposure";}
+      else if(!beating&&improving){rec="MAINTAIN";reason="Below benchmarks but momentum turning positive";}
+      else{rec="REDUCE";reason=d10<0&&mom<0?"Below benchmarks with declining momentum":"Underperforming benchmarks \u2014 reduce exposure";}
+      const cnt=ref.count;
+      const confidence=cnt>=500?"HIGH":cnt>=100?"MEDIUM":cnt>=20?"LOW":"INSUFFICIENT";
+      nPB[k]={sport:sp,format:fmt,rec,reason,confidence,t1m_count:t1m?t1m.count:0,
+        t1m:t1m?{top1:t1m.top1,top10:t1m.top10,top20:t1m.top20,roi:t1m.roi,net:t1m.net}:null,
+        ref:{top1:ref.top1,top10:ref.top10,top20:ref.top20,roi:ref.roi,net:ref.net,count:ref.count},
+        d1,d10,d20,mom,composite_delta:cd};
+    });
+    return{nPD,nMD,nSD,nFD,nMOD,nED,nPB,nPNL};
+  }
+
+  const ORIG={PD:JSON.parse(JSON.stringify(PD)),MD:JSON.parse(JSON.stringify(MD)),
+    FD:JSON.parse(JSON.stringify(FD)),SD:JSON.parse(JSON.stringify(SD)),
+    MOD:JSON.parse(JSON.stringify(MOD)),ED:JSON.parse(JSON.stringify(ED)),
+    PB:JSON.parse(JSON.stringify(PB)),PNL:JSON.parse(JSON.stringify(PNL))};
+
+  function applyObj(target,src){Object.keys(target).forEach(k=>{if(!src[k])delete target[k];});Object.assign(target,src);}
+
+  function applyData(d){
+    applyObj(PD,d.nPD);applyObj(MD,d.nMD);applyObj(FD,d.nFD);applyObj(SD,d.nSD);
+    applyObj(MOD,d.nMOD);applyObj(ED,d.nED);applyObj(PB,d.nPB);applyObj(PNL,d.nPNL);
+    const total=Object.values(d.nPD).reduce((a,p)=>a+(p.ALL?p.ALL.count:0),0);
+    const sports=new Set(Object.keys(d.nPD).map(k=>k.split("|")[0])).size;
+    const latest=Object.values(d.nMD).flat().map(m=>m.month).sort().pop()||"";
+    document.querySelector(".hsub").textContent=`${total.toLocaleString()} entries · ${sports} sports · rake benchmarks: 1%→1.2% · 10%→12% · 20%→24%${latest?" · latest "+latest:""}`;
+    render();
+  }
+
+  function resetData(){
+    applyObj(PD,ORIG.PD);applyObj(MD,ORIG.MD);applyObj(FD,ORIG.FD);applyObj(SD,ORIG.SD);
+    applyObj(MOD,ORIG.MOD);applyObj(ED,ORIG.ED);applyObj(PB,ORIG.PB);applyObj(PNL,ORIG.PNL);
+    document.querySelector(".hsub").textContent="118,728 entries · 16 sports · rake benchmarks: 1%→1.2% · 10%→12% · 20%→24% · latest 2026-02-22";
+    render();
+  }
+
+  function processFile(file){
+    const status=document.getElementById("csvStatus");
+    status.className="csv-status";status.textContent="";
+    if(!file||!file.name.endsWith(".csv")){status.className="csv-status err";status.textContent="Please select a .csv file.";return;}
+    const reader=new FileReader();
+    reader.onload=function(e){
+      const rows=parseCSVText(e.target.result);
+      if(rows.error){status.className="csv-status err";status.textContent="Error: "+rows.error;return;}
+      if(!rows.length){status.className="csv-status err";status.textContent="No valid entries found. Check column names and sport values.";return;}
+      const d=computeAll(rows);
+      applyData(d);
+      const hasField=rows.some(r=>r.totalTeams>0);
+      const keys=new Set(rows.map(r=>r.sport+"|"+r.format)).size;
+      status.className="csv-status ok";
+      status.textContent="✓ Loaded "+rows.length.toLocaleString()+" entries across "+keys+" sport/format combos."+(hasField?"":" Tip: add a '# Teams' column for top% finish rates.");
+      document.getElementById("csvReset").style.display="inline-block";
+    };
+    reader.readAsText(file);
+  }
+
+  document.getElementById("csvOpenBtn").addEventListener("click",()=>document.getElementById("csvOverlay").classList.add("open"));
+  document.getElementById("csvClose").addEventListener("click",()=>document.getElementById("csvOverlay").classList.remove("open"));
+  document.getElementById("csvOverlay").addEventListener("click",e=>{if(e.target===document.getElementById("csvOverlay"))document.getElementById("csvOverlay").classList.remove("open");});
+  document.getElementById("csvDrop").addEventListener("click",()=>document.getElementById("csvFile").click());
+  document.getElementById("csvFile").addEventListener("change",e=>processFile(e.target.files[0]));
+  document.getElementById("csvDrop").addEventListener("dragover",e=>{e.preventDefault();e.currentTarget.classList.add("drag");});
+  document.getElementById("csvDrop").addEventListener("dragleave",e=>e.currentTarget.classList.remove("drag"));
+  document.getElementById("csvDrop").addEventListener("drop",e=>{e.preventDefault();e.currentTarget.classList.remove("drag");processFile(e.dataTransfer.files[0]);});
+  document.getElementById("csvReset").addEventListener("click",()=>{resetData();document.getElementById("csvStatus").className="csv-status";document.getElementById("csvReset").style.display="none";});
+})();
 
 render();
 </script></body>
