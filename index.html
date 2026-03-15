@@ -981,14 +981,14 @@ document.getElementById("pnlView").addEventListener("click",e=>{const b=e.target
     const total=Object.values(d.nPD).reduce((a,p)=>a+(p.ALL?p.ALL.count:0),0);
     const sports=new Set(Object.keys(d.nPD).map(k=>k.split("|")[0])).size;
     const latest=Object.values(d.nMD).flat().map(m=>m.month).sort().pop()||"";
-    document.querySelector(".hsub").textContent=`${total.toLocaleString()} entries · ${sports} sports · rake benchmarks: 1%→1.2% · 10%→12% · 20%→24%${latest?" · latest "+latest:""}`;
+    const es=document.getElementById("entrySummary");if(es)es.textContent=`${total.toLocaleString()} entries · ${sports} sports · latest ${latest||"—"}`;
     render();
   }
 
   function resetData(){
     applyObj(PD,ORIG.PD);applyObj(MD,ORIG.MD);applyObj(FD,ORIG.FD);applyObj(SD,ORIG.SD);
     applyObj(MOD,ORIG.MOD);applyObj(ED,ORIG.ED);applyObj(PB,ORIG.PB);applyObj(PNL,ORIG.PNL);
-    document.querySelector(".hsub").textContent="118,728 entries · 16 sports · rake benchmarks: 1%→1.2% · 10%→12% · 20%→24% · latest 2026-02-22";
+    const es2=document.getElementById("entrySummary");if(es2)es2.textContent="118,728 entries · 16 sports · sample data";
     render();
   }
 
