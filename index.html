@@ -92,9 +92,17 @@ button{font-family:inherit;cursor:pointer;}
 .pbs-red .pbs-num,.pbs-red .pbs-lbl{color:var(--am);}
 .pbs-out .pbs-num,.pbs-out .pbs-lbl{color:var(--re);}
 .pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:12px;}
-.pb-card{background:var(--card);border:1px solid var(--bd);border-radius:10px;overflow:hidden;transition:transform .15s,box-shadow .15s;}
+.pb-card{background:var(--card);border:1px solid var(--bd);border-radius:10px;overflow:hidden;transition:transform .15s,box-shadow .15s;cursor:pointer;user-select:none;}
 .pb-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.3);}
-.pb-card-top{padding:14px 16px 12px;position:relative;}
+.pb-card-top{padding:14px 16px 10px;position:relative;}
+.pb-quick{font-family:"IBM Plex Mono",monospace;font-size:.65rem;color:var(--t2);margin-top:5px;}
+.pb-details{display:none;padding:8px 16px 6px;border-top:1px solid var(--bd);}
+.pb-card.exp .pb-details{display:block;}
+.pb-tog-row{padding:4px 0 8px;text-align:center;}
+.pb-tog{font-family:"IBM Plex Mono",monospace;font-size:.56rem;color:var(--t3);}
+.pb-tog-hide{display:none;}
+.pb-card.exp .pb-tog-show{display:none;}
+.pb-card.exp .pb-tog-hide{display:inline;}
 .pb-card-top::after{content:"";position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0;}
 .pb-inc .pb-card-top::after{background:linear-gradient(90deg,#00d48a,rgba(0,212,138,.2));}
 .pb-mnt .pb-card-top::after{background:linear-gradient(90deg,#4d8fff,rgba(77,143,255,.2));}
@@ -123,7 +131,7 @@ button{font-family:inherit;cursor:pointer;}
 .fp-ok{background:rgba(0,212,138,.1);color:var(--gr);border:1px solid rgba(0,212,138,.2);}
 .fp-warn{background:rgba(245,163,32,.1);color:var(--am);border:1px solid rgba(245,163,32,.2);}
 .fp-bad{background:rgba(255,69,96,.1);color:var(--re);border:1px solid rgba(255,69,96,.2);}
-.pb-stats{display:flex;flex-direction:column;gap:5px;padding:11px 16px;background:var(--card2);border-top:1px solid var(--bd);}
+.pb-stats{display:flex;flex-direction:column;gap:5px;padding:4px 0 2px;}
 .pb-stat{display:flex;align-items:center;justify-content:space-between;}
 .pb-stat-lbl{font-family:"IBM Plex Mono",monospace;font-size:.58rem;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;}
 .pb-stat-val{font-family:"IBM Plex Mono",monospace;font-size:.66rem;font-weight:600;}
@@ -625,7 +633,10 @@ function renderDashboard(){
     const fc2=fmt==="Showdown"?"fmt-s":fmt==="Best Ball"?"fmt-b":"fmt-c";
     const ref=p.ref;
     const fp=(v,b)=>v>=b?"fp-ok":v>=b*.85?"fp-warn":"fp-bad";
-    return`<div class="pb-card ${m.cls}">
+    const entLbl=ref.count>=1000?(ref.count/1000).toFixed(1)+"K":ref.count;
+    const momCol=p.mom>0.05?"#00d48a":p.mom<-0.05?"#ff4560":"#7880b8";
+    const momLbl=p.mom>0.05?"↑ rising":p.mom<-0.05?"↓ falling":"→ flat";
+    return`<div class="pb-card ${m.cls}" onclick="this.classList.toggle('exp')">
       <div class="pb-card-top">
         <div class="pb-head">
           <div style="display:flex;align-items:center;gap:7px">
@@ -639,18 +650,22 @@ function renderDashboard(){
           <div class="pb-rec ${m.rc}">${p.rec}</div>
         </div>
         <div class="pb-reason">${p.reason}</div>
-        <div class="fp-pills">
+        <div class="pb-quick">T10% <strong style="color:${ref.top10>=BENCH.top10?"#00d48a":"#ff4560"}">${ref.top10.toFixed(1)}%</strong> &nbsp;·&nbsp; ROI <strong style="color:${ref.roi>=0?"#00d48a":"#ff4560"}">${ref.roi>=0?"+":""}${ref.roi.toFixed(1)}%</strong> &nbsp;·&nbsp; ${entLbl} entries</div>
+      </div>
+      <div class="pb-details">
+        <div class="fp-pills" style="margin-bottom:8px">
           <span class="fp ${fp(ref.top1,BENCH.top1)}">T1% ${ref.top1.toFixed(1)} ${ref.top1>=BENCH.top1?"✓":"✗"}</span>
           <span class="fp ${fp(ref.top10,BENCH.top10)}">T10% ${ref.top10.toFixed(1)} ${ref.top10>=BENCH.top10?"✓":"✗"}</span>
           <span class="fp ${fp(ref.top20,BENCH.top20)}">T20% ${ref.top20.toFixed(1)} ${ref.top20>=BENCH.top20?"✓":"✗"}</span>
         </div>
+        <div class="pb-stats">
+          <div class="pb-stat"><span class="pb-stat-lbl">Momentum</span><span class="pb-stat-val" style="color:${momCol}">${momLbl}</span></div>
+          ${ed?`<div class="pb-stat"><span class="pb-stat-lbl">Edge Score</span><span class="pb-stat-val">${ed.score}/100</span></div>`:""}
+          <div class="pb-stat"><span class="pb-stat-lbl">Composite Δ</span><span class="pb-stat-val" style="color:${p.composite_delta>=0?"#00d48a":"#ff4560"}">${p.composite_delta>=0?"+":""}${p.composite_delta.toFixed(2)}</span></div>
+          <div class="pb-stat"><span class="pb-stat-lbl">Confidence</span><span class="pb-stat-val" style="color:#7880b8">${p.confidence} · ${ref.count.toLocaleString()} entries</span></div>
+        </div>
       </div>
-      <div class="pb-stats">
-        <div class="pb-stat"><span class="pb-stat-lbl">ROI (ref)</span><span class="pb-stat-val" style="color:${ref.roi>=0?"#00d48a":"#ff4560"}">${ref.roi>=0?"+":""}${ref.roi.toFixed(1)}%</span></div>
-        <div class="pb-stat"><span class="pb-stat-lbl">Momentum</span><span class="pb-stat-val" style="color:${p.mom>0.05?"#00d48a":p.mom<-0.05?"#ff4560":"#7880b8"}">${p.mom>0.05?"↑ improving":p.mom<-0.05?"↓ declining":"→ flat"}</span></div>
-        ${ed?`<div class="pb-stat"><span class="pb-stat-lbl">Edge Score</span><span class="pb-stat-val">${ed.score}/100</span></div>`:""}
-        <div class="pb-stat"><span class="pb-stat-lbl">Sample</span><span class="pb-stat-val" style="color:#7880b8">${ref.count.toLocaleString()} entries</span></div>
-      </div>
+      <div class="pb-tog-row"><span class="pb-tog pb-tog-show">▼ details</span><span class="pb-tog pb-tog-hide">▲ collapse</span></div>
     </div>`;
   }).join("");
 }
@@ -834,6 +849,44 @@ function renderCumPnl(){
   _cumChart=new Chart(ctx,{type:"line",data:{labels:months,datasets:[{label:"Cumulative P&L",data:cumVals,borderColor:lc,backgroundColor:lc+"18",borderWidth:2.5,pointRadius:3,pointBackgroundColor:cumVals.map(v=>v>=0?"#00d48a":"#ff4560"),pointBorderColor:"#08091a",pointBorderWidth:1.5,tension:.3,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return`Cumulative: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}},plugins:[{id:"zl",afterDraw(chart){const{ctx:c,chartArea:{left,right},scales:{y}}=chart;if(!y)return;const yp=y.getPixelForValue(0);c.save();c.setLineDash([4,4]);c.strokeStyle="rgba(255,255,255,.1)";c.lineWidth=1;c.beginPath();c.moveTo(left,yp);c.lineTo(right,yp);c.stroke();c.restore();}}]});
 }
 
+/* ── SCORE ENGINE (mirrors computeAll, runs on sample data at startup) ─ */
+function recomputeScores(){
+  const B=BENCH;
+  Object.keys(PD).forEach(k=>{
+    const pd=PD[k],mo=MOD[k],ref=pd.T6M||pd.T12M||pd.ALL;
+    if(!ref||!ref.count)return;
+    const b1=r2(ref.top1-B.top1),b10=r2(ref.top10-B.top10),b20=r2(ref.top20-B.top20);
+    const rel1=b1/B.top1,rel10=b10/B.top10,rel20=b20/B.top20;
+    const comp=rel10*0.50+rel20*0.30+rel1*0.20;
+    const bc=r2(Math.max(0,Math.min(50,comp*20+25)));
+    const sl=mo?((mo.slope10||0)*0.50+(mo.slope20||0)*0.30+(mo.slope1||0)*0.20):0;
+    const tc=r2(Math.max(0,Math.min(25,sl*4+12.5)));
+    const cc=r2(Math.min(25,ref.count/500*25));
+    ED[k]={score:Math.round(bc+tc+cc),bench_component:bc,trend_component:tc,confidence_component:cc,b1_delta:b1,b10_delta:b10,b20_delta:b20};
+    const[sp,fmt]=k.split("|");
+    const t1m=pd.T1M;
+    const mom=mo?r2((mo.slope10||0)*0.50+(mo.slope20||0)*0.30+(mo.slope1||0)*0.20):0;
+    const cd=r2(comp);
+    const compositeOk=cd>=0,improving=mom>0.05,declining=mom<-0.05;
+    const cnt=ref.count;
+    const confidence=cnt>=500?"HIGH":cnt>=100?"MEDIUM":cnt>=20?"LOW":"INSUFFICIENT";
+    let rec,reason;
+    if(b10<-4&&b20<-4&&declining){rec="SIT OUT";reason="Core finish rates well below benchmark with declining trend";}
+    else if(b10<-3&&declining){rec="SIT OUT";reason="Top 10% significantly below benchmark and getting worse";}
+    else if(compositeOk&&improving){rec="INCREASE";reason=`Beating benchmarks${ref.roi>=0?" with positive ROI":" despite recent loss"} \u2014 momentum rising`;}
+    else if(compositeOk&&!declining){rec="MAINTAIN";reason="Above composite benchmark \u2014 hold current exposure";}
+    else if(compositeOk&&declining){rec="REDUCE";reason="Beating benchmarks but momentum declining \u2014 reduce while monitoring";}
+    else if(!compositeOk&&improving){rec="MAINTAIN";reason="Below benchmark but trend turning positive \u2014 watch closely";}
+    else if(!compositeOk&&!declining){rec="REDUCE";reason="Below benchmark \u2014 consider reducing until rates improve";}
+    else{rec="REDUCE";reason="Below benchmarks with declining momentum";}
+    if(cnt<20&&rec==="INCREASE"){rec="MAINTAIN";reason="Shows promise but needs more sample \u2014 hold exposure";}
+    PB[k]={sport:sp,format:fmt,rec,reason,confidence,t1m_count:t1m?t1m.count:0,
+      t1m:t1m?{top1:t1m.top1,top10:t1m.top10,top20:t1m.top20,roi:t1m.roi,net:t1m.net}:null,
+      ref:{top1:ref.top1,top10:ref.top10,top20:ref.top20,roi:ref.roi,net:ref.net,count:ref.count},
+      b1,b10,b20,mom,composite_delta:cd};
+  });
+}
+
 /* ── RENDER + EVENTS ───────────────────────────────────── */
 function render(){renderDashboard();renderPerformance();renderMonthly();renderQuadrant();renderEdgeChart();renderPnl();renderCumPnl();}
 
@@ -992,17 +1045,22 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
       }
       nMOD[k]={slope1:slope(months,"top1"),slope10:slope(months,"top10"),slope20:slope(months,"top20"),months:months.length,n:(nPD[k].ALL||{}).count||0};
     });
-    const BENCH_={top1:1.2,top10:12,top20:24};
+    const B_={top1:1.2,top10:12,top20:24};
     const nED={};
     Object.keys(nPD).forEach(k=>{
       const pd=nPD[k],mo=nMOD[k],ref=pd.T6M||pd.T12M||pd.ALL;
       if(!ref||!ref.count)return;
-      const b1=r2(ref.top1-BENCH_.top1),b10=r2(ref.top10-BENCH_.top10),b20=r2(ref.top20-BENCH_.top20);
-      const comp=(b1*0.5+b10*0.1+b20*0.05)/0.65;
-      const bc=r2(Math.max(0,Math.min(50,comp*5+25)));
-      const sl=mo?((mo.slope1||0)*0.5+(mo.slope10||0)*0.3+(mo.slope20||0)*0.2):0;
-      const tc=r2(Math.max(0,Math.min(25,sl*5+12.5)));
-      const cc=r2(Math.min(25,ref.count/100*25));
+      const b1=r2(ref.top1-B_.top1),b10=r2(ref.top10-B_.top10),b20=r2(ref.top20-B_.top20);
+      // Normalize by benchmark so deltas are comparable across T1/T10/T20
+      const rel1=b1/B_.top1,rel10=b10/B_.top10,rel20=b20/B_.top20;
+      // Top10% weighted most — primary DFS cash-line metric
+      const comp=rel10*0.50+rel20*0.30+rel1*0.20;
+      const bc=r2(Math.max(0,Math.min(50,comp*20+25)));
+      // Trend: same top10%-first weighting
+      const sl=mo?((mo.slope10||0)*0.50+(mo.slope20||0)*0.30+(mo.slope1||0)*0.20):0;
+      const tc=r2(Math.max(0,Math.min(25,sl*4+12.5)));
+      // Confidence aligns with HIGH=500+ label
+      const cc=r2(Math.min(25,ref.count/500*25));
       nED[k]={score:Math.round(bc+tc+cc),bench_component:bc,trend_component:tc,confidence_component:cc,b1_delta:b1,b10_delta:b10,b20_delta:b20};
     });
     const nPB={};
@@ -1010,22 +1068,27 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
       const[sp,fmt]=k.split("|"),pd=nPD[k],ed=nED[k],mo=nMOD[k];
       const ref=pd.T6M||pd.T12M||pd.ALL;if(!ref)return;
       const t1m=pd.T1M;
-      const d1=ed?ed.b1_delta:-1.2,d10=ed?ed.b10_delta:-12,d20=ed?ed.b20_delta:-24;
-      const mom=mo?r2((mo.slope1||0)*0.5+(mo.slope10||0)*0.3+(mo.slope20||0)*0.2):0;
-      const cd=r2((d1*0.5+d10*0.1+d20*0.05)/0.65);
-      const beating=d10>=0,improving=mom>0.05;
-      let rec,reason;
-      if(d10<-3&&!improving){rec="SIT OUT";reason="Significantly below benchmarks and getting worse";}
-      else if(beating&&improving){rec="INCREASE";reason="Beating benchmarks with stable or improving trend";}
-      else if(beating){rec=mom<-0.1?"REDUCE":"MAINTAIN";reason=mom<-0.1?"Below benchmarks with declining momentum":"Above benchmarks \u2014 hold current exposure";}
-      else if(!beating&&improving){rec="MAINTAIN";reason="Below benchmarks but momentum turning positive";}
-      else{rec="REDUCE";reason=d10<0&&mom<0?"Below benchmarks with declining momentum":"Underperforming benchmarks \u2014 reduce exposure";}
+      const b1=ed?ed.b1_delta:r2(-B_.top1),b10=ed?ed.b10_delta:r2(-B_.top10),b20=ed?ed.b20_delta:r2(-B_.top20);
+      // Composite: normalized, top10%-weighted
+      const cd=r2((b10/B_.top10)*0.50+(b20/B_.top20)*0.30+(b1/B_.top1)*0.20);
+      const mom=mo?r2((mo.slope10||0)*0.50+(mo.slope20||0)*0.30+(mo.slope1||0)*0.20):0;
+      const compositeOk=cd>=0,improving=mom>0.05,declining=mom<-0.05;
       const cnt=ref.count;
       const confidence=cnt>=500?"HIGH":cnt>=100?"MEDIUM":cnt>=20?"LOW":"INSUFFICIENT";
+      let rec,reason;
+      if(b10<-4&&b20<-4&&declining){rec="SIT OUT";reason="Core finish rates well below benchmark with declining trend";}
+      else if(b10<-3&&declining){rec="SIT OUT";reason="Top 10% significantly below benchmark and getting worse";}
+      else if(compositeOk&&improving){rec="INCREASE";reason=`Beating benchmarks${ref.roi>=0?" with positive ROI":" despite recent loss"} \u2014 momentum rising`;}
+      else if(compositeOk&&!declining){rec="MAINTAIN";reason="Above composite benchmark \u2014 hold current exposure";}
+      else if(compositeOk&&declining){rec="REDUCE";reason="Beating benchmarks but momentum declining \u2014 reduce while monitoring";}
+      else if(!compositeOk&&improving){rec="MAINTAIN";reason="Below benchmark but trend turning positive \u2014 watch closely";}
+      else if(!compositeOk&&!declining){rec="REDUCE";reason="Below benchmark \u2014 consider reducing until rates improve";}
+      else{rec="REDUCE";reason="Below benchmarks with declining momentum";}
+      if(cnt<20&&rec==="INCREASE"){rec="MAINTAIN";reason="Shows promise but needs more sample \u2014 hold exposure";}
       nPB[k]={sport:sp,format:fmt,rec,reason,confidence,t1m_count:t1m?t1m.count:0,
         t1m:t1m?{top1:t1m.top1,top10:t1m.top10,top20:t1m.top20,roi:t1m.roi,net:t1m.net}:null,
         ref:{top1:ref.top1,top10:ref.top10,top20:ref.top20,roi:ref.roi,net:ref.net,count:ref.count},
-        d1,d10,d20,mom,composite_delta:cd};
+        b1,b10,b20,mom,composite_delta:cd};
     });
     return{nPD,nMD,nSD,nFD,nMOD,nED,nPB,nPNL};
   }
@@ -1049,9 +1112,9 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
 
   function resetData(){
     applyObj(PD,ORIG.PD);applyObj(MD,ORIG.MD);applyObj(FD,ORIG.FD);applyObj(SD,ORIG.SD);
-    applyObj(MOD,ORIG.MOD);applyObj(ED,ORIG.ED);applyObj(PB,ORIG.PB);applyObj(PNL,ORIG.PNL);
+    applyObj(MOD,ORIG.MOD);applyObj(PNL,ORIG.PNL);
     const es2=document.getElementById("entrySummary");if(es2)es2.textContent="118,728 entries · 16 sports · sample data";
-    render();
+    recomputeScores();render();
   }
 
   function processFile(file){
@@ -1089,6 +1152,6 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   document.getElementById("csvReset").addEventListener("click",()=>{resetData();document.getElementById("csvStatus").className="csv-status";document.getElementById("csvReset").style.display="none";});
 })();
 
-render();
+recomputeScores();render();
 </script></body>
 </html>
