@@ -603,7 +603,7 @@ function renderMonthly(){
           titleColor:"#dde1f0",bodyColor:"#7278a0",
           titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},
           callbacks:{afterBody(i){const p=ser[i[0].dataIndex];const d=p[rk]-bn;
-            return["",`bench ${bn}%  →  ${p\[rk\]>=bn?"✓ ABOVE":"✗ BELOW"}  (${d>=0?"+":""}${d.toFixed(2)}pp)`];}}}},
+            return["",`bench ${bn}%  →  ${p[rk]>=bn?"✓ ABOVE":"✗ BELOW"}  (${d>=0?"+":""}${d.toFixed(2)}pp)`];}}}},
       scales:{
         x:{ticks:{color:"#434768",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1a1e30"}},
         yR:{type:"linear",position:"left",min:0,ticks:{color:"#434768",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(1)+"%"},grid:{color:"#1a1e30"}},
@@ -781,7 +781,7 @@ function renderFieldTable(){
       const d=FD[k][b];if(!d)return;
       rows+=`<tr>
         <td><span class="stag">${sl(sp)}</span><span class="ftag ${fc(fm)}">${fm}</span></td>
-        <td><span class="blbl ${BCL\[b\]}">${BLB[b]}</span></td>
+        <td><span class="blbl ${BCL[b]}">${BLB[b]}</span></td>
         <td><span class="nmut">${d.count.toLocaleString()}</span></td>
         <td style="color:${vc(d.top1,BENCH.top1)};font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:500">${d.top1.toFixed(2)}%</td>
         <td style="color:${vc(d.top10,BENCH.top10)};font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:500">${d.top10.toFixed(2)}%</td>
@@ -808,7 +808,7 @@ function renderStakeTable(){
       const d=SD[k][t];if(!d)return;
       rows+=`<tr>
         <td><span class="stag">${sl(sp)}</span><span class="ftag ${fc(fm)}">${fm}</span></td>
-        <td><span class="blbl ${TCL\[t\]}">${TLB[t]}</span></td>
+        <td><span class="blbl ${TCL[t]}">${TLB[t]}</span></td>
         <td><span class="nmut">${d.count.toLocaleString()}</span></td>
         <td style="color:${vc(d.top1,BENCH.top1)};font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:500">${d.top1.toFixed(2)}%</td>
         <td style="color:${vc(d.top10,BENCH.top10)};font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:500">${d.top10.toFixed(2)}%</td>
@@ -904,7 +904,7 @@ function renderDetail(){
       const t1a=t1m&&ref?arw(t1m.top1,ref.top1)+"<br>"+arw(t1m.top10,ref.top10):'<span class="na">—</span>';
       return`<tr>
         <td><span class="stag">${sl(r.sp)}</span><span class="ftag ${fc(r.fm)}">${r.fm}</span></td>
-        <td><span style="font-family:'IBM Plex Mono',monospace;font-size:.75rem;font-weight:600;color:${sc\_c}">${sc}</span></td>
+        <td><span style="font-family:'IBM Plex Mono',monospace;font-size:.75rem;font-weight:600;color:${sc_c}">${sc}</span></td>
         <td><div class="wg">${wcells(r.byW,"top1",BENCH.top1)}</div></td>
         <td><div class="wg">${wcells(r.byW,"top10",BENCH.top10)}</div></td>
         <td><div class="wg">${wcells(r.byW,"top20",BENCH.top20)}</div></td>
