@@ -135,7 +135,9 @@ button{font-family:inherit;cursor:pointer;}
 .pr-mnt{color:var(--bl);}
 .pr-red{color:var(--am);}
 .pr-out{color:var(--re);}
-.pb-reason{font-size:.76rem;color:var(--t2);line-height:1.45;margin-bottom:10px;}
+.pb-reason{font-size:.76rem;color:var(--t2);line-height:1.45;margin-bottom:6px;}
+.pb-mini-stat{font-family:"IBM Plex Mono",monospace;font-size:.6rem;color:var(--t3);margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;}
+.pb-mini-stat span{color:var(--t2);}
 .fp-pills{display:flex;gap:4px;flex-wrap:wrap;}
 .fp{font-family:"IBM Plex Mono",monospace;font-size:.58rem;padding:1px 5px;border-radius:3px;}
 .fp-ok{background:rgba(0,212,138,.1);color:var(--gr);border:1px solid rgba(0,212,138,.2);}
@@ -554,6 +556,11 @@ function renderDashboard(){
   // Aggregate finish rates
   const agg=wagg(keys,"ALL");
   const t1=agg?agg.top1:0,t10=agg?agg.top10:0,t20=agg?agg.top20:0;
+  // T6M (recent ~6mo) P&L
+  const t6Items=keys.map(k=>PD[k].T6M).filter(Boolean);
+  const t6Net=t6Items.length?r2(t6Items.reduce((a,x)=>a+x.wins,0)-t6Items.reduce((a,x)=>a+x.fees,0)):null;
+  const t6Ent=t6Items.reduce((a,x)=>a+x.count,0);
+  const t6ROI=t6Items.length&&t6Items.reduce((a,x)=>a+x.fees,0)>0?r2((t6Items.reduce((a,x)=>a+x.wins,0)-t6Items.reduce((a,x)=>a+x.fees,0))/t6Items.reduce((a,x)=>a+x.fees,0)*100):null;
   const nCol=totNet>=0?"#00d48a":"#ff4560";
   const rCol=totROI>=0?"#00d48a":"#ff4560";
   const arc=2*Math.PI*28*(1-pScore/100);
@@ -586,10 +593,9 @@ function renderDashboard(){
       <div class="kpi-value" style="color:${rCol}">${totROI>=0?"+":""}${totROI.toFixed(1)}%</div>
       <div class="kpi-sub">${keys.length} sport/format combos tracked</div>
     </div>
-    <div class="kpi-card kpi-neu">
-      <div class="kpi-label" title="% of entries finishing in the top 10% of field — primary DFS cash line metric">Top 10% Finish Rate</div>
-      <div class="kpi-value" style="color:${vc(t10,BENCH.top10)}">${t10.toFixed(1)}%</div>
-      <div class="kpi-sub">Benchmark ${BENCH.top10}% · ${t10>=BENCH.top10?"✓ beating it":"✗ below it"}</div>
+    <div class="kpi-card ${t6Net==null?"kpi-neu":t6Net>=0?"kpi-pos":"kpi-neg"}">
+      <div class="kpi-label">Recent 6 Months</div>
+      ${t6Net!=null?`<div class="kpi-value" style="color:${t6Net>=0?"#00d48a":"#ff4560"}">${t6Net>=0?"+$":"−$"}${Math.abs(t6Net).toFixed(0)}</div><div class="kpi-sub">ROI ${t6ROI!=null?(t6ROI>=0?"+":"")+t6ROI.toFixed(1)+"%":"–"} · ${t6Ent.toLocaleString()} entries</div>`:`<div class="kpi-value" style="color:var(--t3)">–</div><div class="kpi-sub">No data in last 6 months</div>`}
     </div>`;
   document.getElementById("entrySummary").textContent=`${totEnt.toLocaleString()} total entries · ${new Set(keys.map(k=>k.split("|")[0])).size} sports`;
   // Finish rate bars
@@ -651,6 +657,7 @@ function renderDashboard(){
           <div class="pb-rec ${m.rc}">${p.rec}</div>
         </div>
         <div class="pb-reason">${p.reason}</div>
+        <div class="pb-mini-stat">${(()=>{const parts=[];parts.push(`<span>${entLbl} entries</span>`);if(p.t1m&&p.t1m_count>=3){const mn=p.t1m.net;const mc=mn>=0?"#00d48a":"#ff4560";parts.push(`Last 30d: <span style="color:${mc}">${mn>=0?"+$":"−$"}${Math.abs(mn).toFixed(0)}</span> · ${p.t1m_count} entries`);}return parts.join(" · ");})()}</div>
         ${(()=>{if(!BANKROLL)return"";const pct=p.rec==="SIT OUT"?0:(STAKE_PCT[p.rec]||0);const amt=r2(BANKROLL*pct/100);return pct>0?`<div class="pb-stake">Rec. stake <strong>$${amt.toFixed(0)}</strong> <span class="pb-stake-pct">${pct}% of bankroll</span></div>`:`<div class="pb-stake" style="color:#ff4560">$0 — sit this out</div>`;})()}
       </div>
       <div class="pb-details">
