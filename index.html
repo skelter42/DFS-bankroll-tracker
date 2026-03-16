@@ -1123,7 +1123,19 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
     document.getElementById("csvReset").style.display=hasData?"inline-block":"none";
   }
 
-  function saveToStorage(){try{localStorage.setItem(LS_ROWS,JSON.stringify(USER_ROWS));localStorage.setItem(LS_COUNT,USER_FILE_COUNT);}catch(e){}}
+  function saveToStorage(){
+    // Store as compact arrays [sport,format,ym,place,winnings,fee,totalTeams] — ~60% smaller than objects
+    try{
+      const compact=USER_ROWS.map(r=>[r.sport,r.format,r.ym,r.place,r.winnings,r.fee,r.totalTeams]);
+      localStorage.setItem(LS_ROWS,JSON.stringify(compact));
+      localStorage.setItem(LS_COUNT,USER_FILE_COUNT);
+    }catch(e){
+      // Quota exceeded — data won't survive refresh; show warning
+      try{localStorage.removeItem(LS_ROWS);}catch(e2){}
+      const st=document.getElementById("csvStatus");
+      if(st&&!st.textContent.includes("⚠"))st.textContent+=" · ⚠ Dataset too large for browser storage — use Export CSV to back it up";
+    }
+  }
 
   function updateSampleBanner(){
     const b=document.getElementById("sampleBanner");
@@ -1134,9 +1146,18 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
     try{
       const saved=localStorage.getItem(LS_ROWS);
       if(!saved)return;
-      const rows=JSON.parse(saved);
-      if(!rows||!rows.length)return;
-      USER_ROWS=rows;USER_FILE_COUNT=parseInt(localStorage.getItem(LS_COUNT)||"1",10);
+      const data=JSON.parse(saved);
+      if(!data||!data.length)return;
+      // Support both compact array format and legacy object format
+      USER_ROWS=data.map(r=>{
+        if(Array.isArray(r)){
+          const[sport,format,ym,place,winnings,fee,totalTeams]=r;
+          const[yr,mo]=ym.split("-").map(Number);
+          return{sport,format,ym,dateMs:new Date(yr,mo-1,1).getTime(),place,winnings,fee,totalTeams};
+        }
+        return r;
+      });
+      USER_FILE_COUNT=parseInt(localStorage.getItem(LS_COUNT)||"1",10);
       const d=computeAll(USER_ROWS);applyData(d);
       const status=document.getElementById("csvStatus");
       const keys=new Set(USER_ROWS.map(r=>r.sport+"|"+r.format)).size;
