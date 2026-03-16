@@ -441,7 +441,7 @@ button{font-family:inherit;cursor:pointer;}
     </div>
   </div>
   <div class="chart-panel">
-    <div class="chart-hdr"><div><div class="tbl-title">Cumulative Bankroll P&amp;L</div><div class="tbl-sub">Running net profit/loss over time · upload CSV to populate</div></div></div>
+    <div class="chart-hdr"><div><div class="tbl-title">Cumulative Bankroll P&amp;L</div><div class="tbl-sub">Running net profit/loss over time · upload CSV to populate</div></div><div class="win-toggle" id="cumMode"><button class="win-btn active" data-mode="abs">$</button><button class="win-btn" data-mode="pct" title="% of bankroll (requires bankroll set)">%</button></div></div>
     <div class="chart-body"><div class="ch340"><canvas id="cumChart"></canvas></div></div>
   </div>
 </div>
@@ -506,6 +506,7 @@ let PB_FILTER=null;
 let PNL_VIEW=(()=>{try{return localStorage.getItem("dfs_pnl_view")||"detail";}catch(e){return"detail";}})();
 let PNL_WIN=(()=>{try{return localStorage.getItem("dfs_pnl_win")||"ALL";}catch(e){return"ALL";}})();
 let PNL_SORT=(()=>{try{const s=JSON.parse(localStorage.getItem("pnl_sort")||"null");return(s&&s.col&&s.dir)?s:{col:"net",dir:-1};}catch(e){return{col:"net",dir:-1};}})();
+let CUM_MODE=(()=>{try{return localStorage.getItem("dfs_cum_mode")||"abs";}catch(e){return"abs";}})();
 let _mChart=null,_qChart=null,_eChart=null,_pChart=null,_mPnlChart=null,_cumChart=null;
 
 function vc(v,b){return v>=b?"#00d48a":v>=b*.8?"#f5a320":"#ff4560";}
@@ -844,10 +845,14 @@ function renderCumPnl(){
   const months=Object.keys(allM).sort();
   const ctx=document.getElementById("cumChart").getContext("2d");
   if(!months.length){ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.save();ctx.fillStyle="#3d4480";ctx.font="11px IBM Plex Mono";ctx.textAlign="center";ctx.fillText("Upload CSV to see cumulative P&L",ctx.canvas.width/2,Math.max(ctx.canvas.height/2,30));ctx.restore();return;}
-  let cum=0;const cumVals=months.map(m=>{cum=r2(cum+allM[m]);return cum;});
+  let cum=0;const cumAbs=months.map(m=>{cum=r2(cum+allM[m]);return cum;});
+  const usePct=CUM_MODE==="pct"&&BANKROLL>0;
+  const cumVals=usePct?cumAbs.map(v=>r2(v/BANKROLL*100)):cumAbs;
   const final=cumVals[cumVals.length-1];
   const lc=final>=0?"#00d48a":"#ff4560";
-  _cumChart=new Chart(ctx,{type:"line",data:{labels:months,datasets:[{label:"Cumulative P&L",data:cumVals,borderColor:lc,backgroundColor:lc+"18",borderWidth:2.5,pointRadius:3,pointBackgroundColor:cumVals.map(v=>v>=0?"#00d48a":"#ff4560"),pointBorderColor:"#08091a",pointBorderWidth:1.5,tension:.3,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return`Cumulative: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}},plugins:[{id:"zl",afterDraw(chart){const{ctx:c,chartArea:{left,right},scales:{y}}=chart;if(!y)return;const yp=y.getPixelForValue(0);c.save();c.setLineDash([4,4]);c.strokeStyle="rgba(255,255,255,.1)";c.lineWidth=1;c.beginPath();c.moveTo(left,yp);c.lineTo(right,yp);c.stroke();c.restore();}}]});
+  const yFmt=usePct?v=>(v>=0?"+":"")+v.toFixed(1)+"%":v=>(v>=0?"+$":"-$")+Math.abs(v).toFixed(2);
+  const ttFmt=usePct?(v=>`Cumulative: ${v>=0?"+":""}${v.toFixed(2)}% of bankroll`):(v=>`Cumulative: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`);
+  _cumChart=new Chart(ctx,{type:"line",data:{labels:months,datasets:[{label:"Cumulative P&L",data:cumVals,borderColor:lc,backgroundColor:lc+"18",borderWidth:2.5,pointRadius:3,pointBackgroundColor:cumVals.map(v=>v>=0?"#00d48a":"#ff4560"),pointBorderColor:"#08091a",pointBorderWidth:1.5,tension:.3,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){return ttFmt(i.parsed.y);}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:yFmt},grid:{color:"#1c2044"}}}},plugins:[{id:"zl",afterDraw(chart){const{ctx:c,chartArea:{left,right},scales:{y}}=chart;if(!y)return;const yp=y.getPixelForValue(0);c.save();c.setLineDash([4,4]);c.strokeStyle="rgba(255,255,255,.1)";c.lineWidth=1;c.beginPath();c.moveTo(left,yp);c.lineTo(right,yp);c.stroke();c.restore();}}]});
 }
 
 /* ── SCORE ENGINE (mirrors computeAll, runs on sample data at startup) ─ */
@@ -906,6 +911,7 @@ document.getElementById("rateToggle").addEventListener("click",e=>{const b=e.tar
 
 document.getElementById("pnlView").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_VIEW=b.dataset.view;try{localStorage.setItem("dfs_pnl_view",PNL_VIEW);}catch(e){}document.querySelectorAll("#pnlView .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
 document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_WIN=b.dataset.win;try{localStorage.setItem("dfs_pnl_win",PNL_WIN);}catch(e){}document.querySelectorAll("#pnlWin .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
+document.getElementById("cumMode").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;CUM_MODE=b.dataset.mode;if(CUM_MODE==="pct"&&!BANKROLL){alert("Set your bankroll in the header first");return;}try{localStorage.setItem("dfs_cum_mode",CUM_MODE);}catch(e){}document.querySelectorAll("#cumMode .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderCumPnl();});
 
 
 /* ── CSV UPLOAD ENGINE ─────────────────────────────────── */
@@ -935,7 +941,7 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   }
   function feeToTier(f){return f<=0.25?"penny":f<=2?"low":f<=5?"mid":"high";}
   function fieldToSize(n){return n<500?"small":n<=5000?"medium":"large";}
-  function r2(v){return Math.round(v*100)/100;}
+  // r2 is defined globally above this IIFE
 
   function parseCSVText(text){
     const lines=text.trim().split(/\r?\n/);
@@ -1081,8 +1087,9 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
       const cnt=ref.count;
       const confidence=cnt>=500?"HIGH":cnt>=100?"MEDIUM":cnt>=20?"LOW":"INSUFFICIENT";
       let rec,reason;
-      if(b10<-4&&b20<-4&&declining){rec="SIT OUT";reason="Core finish rates well below benchmark with declining trend";}
-      else if(b10<-3&&declining){rec="SIT OUT";reason="Top 10% significantly below benchmark and getting worse";}
+      if(b10<-4&&b20<-4&&declining&&confidence==="HIGH"){rec="SIT OUT";reason="Core finish rates well below benchmark with declining trend";}
+      else if(b10<-3&&declining&&confidence==="HIGH"){rec="SIT OUT";reason="Top 10% significantly below benchmark and getting worse";}
+      else if(b10<-4&&b20<-4&&declining){rec="REDUCE";reason="Finish rates below benchmark with declining trend — more data needed before sitting out";}
       else if(compositeOk&&improving){rec="INCREASE";reason="Beating benchmarks \u2014 finish rates above target with rising momentum";}
       else if(compositeOk&&!declining){rec="MAINTAIN";reason="Above composite benchmark \u2014 hold current exposure";}
       else if(compositeOk&&declining){rec="REDUCE";reason="Beating benchmarks but momentum declining \u2014 reduce while monitoring";}
@@ -1299,6 +1306,7 @@ document.getElementById("pbGrid").addEventListener("keydown",e=>{if((e.key===" "
   document.querySelectorAll("#rateToggle .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.rate===AR));
   document.querySelectorAll("#pnlView .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.view===PNL_VIEW));
   document.querySelectorAll("#pnlWin .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.win===PNL_WIN));
+  document.querySelectorAll("#cumMode .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===CUM_MODE));
 })();
 recomputeScores();render();
 if(typeof updateSampleBanner==="function")updateSampleBanner();
