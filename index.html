@@ -505,7 +505,7 @@ let PWIN=(()=>{try{return localStorage.getItem("dfs_pwin")||"T12M";}catch(e){ret
 let BANKROLL=0;
 let STAKE_PCT=(()=>{try{const s=JSON.parse(localStorage.getItem("dfs_stake_pct")||"null");return(s&&s.INCREASE!=null)?s:{INCREASE:8,MAINTAIN:4,REDUCE:1.5};}catch(e){return{INCREASE:8,MAINTAIN:4,REDUCE:1.5};}})();
 
-let PB_FILTER=null;
+let PB_FILTER=(()=>{try{const v=localStorage.getItem("dfs_pb_filter");return v||null;}catch(e){return null;}})();
 let PNL_VIEW=(()=>{try{return localStorage.getItem("dfs_pnl_view")||"detail";}catch(e){return"detail";}})();
 let PNL_WIN=(()=>{try{return localStorage.getItem("dfs_pnl_win")||"ALL";}catch(e){return"ALL";}})();
 let PNL_SORT=(()=>{try{const s=JSON.parse(localStorage.getItem("pnl_sort")||"null");return(s&&s.col&&s.dir)?s:{col:"net",dir:-1};}catch(e){return{col:"net",dir:-1};}})();
@@ -620,10 +620,10 @@ function renderDashboard(){
   const counts={INCREASE:0,MAINTAIN:0,REDUCE:0,"SIT OUT":0};
   Object.keys(PB).forEach(k=>{if(PB[k]&&PB[k].rec)counts[PB[k].rec]=(counts[PB[k].rec]||0)+1;});
   document.getElementById("pbSummary").innerHTML=`
-    <div class="pbs pbs-inc${PB_FILTER==="INCREASE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='INCREASE'?null:'INCREASE';renderDashboard()"><div class="pbs-num">${counts.INCREASE||0}</div><div class="pbs-lbl">↑ Increase</div></div>
-    <div class="pbs pbs-mnt${PB_FILTER==="MAINTAIN"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='MAINTAIN'?null:'MAINTAIN';renderDashboard()"><div class="pbs-num">${counts.MAINTAIN||0}</div><div class="pbs-lbl">→ Maintain</div></div>
-    <div class="pbs pbs-red${PB_FILTER==="REDUCE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='REDUCE'?null:'REDUCE';renderDashboard()"><div class="pbs-num">${counts.REDUCE||0}</div><div class="pbs-lbl">↓ Reduce</div></div>
-    <div class="pbs pbs-out${PB_FILTER==="SIT OUT"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='SIT OUT'?null:'SIT OUT';renderDashboard()"><div class="pbs-num">${counts["SIT OUT"]||0}</div><div class="pbs-lbl">✕ Sit Out</div></div>`;
+    <div class="pbs pbs-inc${PB_FILTER==="INCREASE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='INCREASE'?null:'INCREASE';try{localStorage.setItem('dfs_pb_filter',PB_FILTER||'')}catch(e){}renderDashboard()"><div class="pbs-num">${counts.INCREASE||0}</div><div class="pbs-lbl">↑ Increase</div></div>
+    <div class="pbs pbs-mnt${PB_FILTER==="MAINTAIN"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='MAINTAIN'?null:'MAINTAIN';try{localStorage.setItem('dfs_pb_filter',PB_FILTER||'')}catch(e){}renderDashboard()"><div class="pbs-num">${counts.MAINTAIN||0}</div><div class="pbs-lbl">→ Maintain</div></div>
+    <div class="pbs pbs-red${PB_FILTER==="REDUCE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='REDUCE'?null:'REDUCE';try{localStorage.setItem('dfs_pb_filter',PB_FILTER||'')}catch(e){}renderDashboard()"><div class="pbs-num">${counts.REDUCE||0}</div><div class="pbs-lbl">↓ Reduce</div></div>
+    <div class="pbs pbs-out${PB_FILTER==="SIT OUT"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='SIT OUT'?null:'SIT OUT';try{localStorage.setItem('dfs_pb_filter',PB_FILTER||'')}catch(e){}renderDashboard()"><div class="pbs-num">${counts["SIT OUT"]||0}</div><div class="pbs-lbl">✕ Sit Out</div></div>`;
   // Playbook cards
   const order={INCREASE:0,MAINTAIN:1,REDUCE:2,"SIT OUT":3};
   const sorted=Object.keys(PB).filter(k=>PB[k]&&(!PB_FILTER||PB[k].rec===PB_FILTER)).sort((a,b)=>{
@@ -651,7 +651,7 @@ function renderDashboard(){
             <span style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;color:#fff">${sp}</span>
             <span class="f-tag ${fc2}">${fmt}</span>
           </div>
-          <span class="conf-tag ${cc[p.confidence]||"ct-ins"}">${p.confidence}</span>
+          <span class="conf-tag ${cc[p.confidence]||"ct-ins"}" title="HIGH: 500+ entries · MEDIUM: 100-499 · LOW: 20-99 · INSUFFICIENT: &lt;20">${p.confidence}</span>
         </div>
         <div class="pb-rec-row">
           <div class="pb-icon ${m.ic}">${m.icon}</div>
@@ -824,10 +824,10 @@ function renderPnl(){
   const showCash=rows.some(r=>r.cashRate!=null);
   const th=(col,lbl)=>`<th class="r" style="${PNL_SORT.col===col?"color:#4d8fff":""}" onclick="PNL_SORT={col:'${col}',dir:PNL_SORT.col==='${col}'?-PNL_SORT.dir:-1};try{localStorage.setItem('pnl_sort',JSON.stringify(PNL_SORT));}catch(e){}renderPnl()">${lbl}${PNL_SORT.col===col?(PNL_SORT.dir>0?" ↑":" ↓"):""}</th>`;
   document.getElementById("pnlTable").innerHTML=`<table class="pnl-tbl">
-    <thead><tr><th>${PNL_VIEW==="sport"?"Sport":"Sport / Format"}</th>${th("count","Entries")}${th("fees","Fees")}${th("wins","Returned")}${th("net","Net P&L")}${th("roi","ROI")}${showCash?th("cashRate","ITM%"):""}</tr></thead>
+    <thead><tr><th>${PNL_VIEW==="sport"?"Sport":"Sport / Format"}</th>${th("count","Entries")}${th("fees","Fees")}<th class="r" title="Average entry fee per contest">Avg Fee</th>${th("wins","Returned")}${th("net","Net P&L")}${th("roi","ROI")}${showCash?th("cashRate","ITM%"):""}</tr></thead>
     <tbody>
-    ${rows.map(r=>{const cc=r.cashRate!=null?(r.cashRate>=30?"v-pos":r.cashRate>=20?"":"v-neg"):"v-mut";return`<tr><td><div class="s-cell">${sl(r.sport)}${r.format?fc(r.format):""}</div></td><td style="text-align:right" class="v-mut">${r.count.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${r.fees.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${r.wins.toFixed(0)}</td><td style="text-align:right"><span class="${r.net>=0?"v-pos":"v-neg"}">${r.net>=0?"+$":"-$"}${Math.abs(r.net).toFixed(0)}</span></td><td style="text-align:right"><span class="${r.roi>=0?"v-pos":"v-neg"}">${r.roi>=0?"+":""}${r.roi.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="${cc}">${r.cashRate!=null?r.cashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>`;}).join("")}
-    <tr class="total-row"><td><strong>TOTAL</strong></td><td style="text-align:right" class="v-mut">${tC.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${tF.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${tW.toFixed(0)}</td><td style="text-align:right"><span class="${tN>=0?"v-pos":"v-neg"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</span></td><td style="text-align:right"><span class="${tR>=0?"v-pos":"v-neg"}">${tR>=0?"+":""}${tR.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="v-mut">${tCashRate!=null?tCashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>
+    ${rows.map(r=>{const cc=r.cashRate!=null?(r.cashRate>=30?"v-pos":r.cashRate>=20?"":"v-neg"):"v-mut";const avgFee=r.count>0?r2(r.fees/r.count):0;return`<tr><td><div class="s-cell">${sl(r.sport)}${r.format?fc(r.format):""}</div></td><td style="text-align:right" class="v-mut">${r.count.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${r.fees.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${avgFee.toFixed(2)}</td><td style="text-align:right" class="v-mut">$${r.wins.toFixed(0)}</td><td style="text-align:right"><span class="${r.net>=0?"v-pos":"v-neg"}">${r.net>=0?"+$":"-$"}${Math.abs(r.net).toFixed(0)}</span></td><td style="text-align:right"><span class="${r.roi>=0?"v-pos":"v-neg"}">${r.roi>=0?"+":""}${r.roi.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="${cc}">${r.cashRate!=null?r.cashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>`;}).join("")}
+    <tr class="total-row"><td><strong>TOTAL</strong></td><td style="text-align:right" class="v-mut">${tC.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${tF.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${tC>0?r2(tF/tC).toFixed(2):"0"}</td><td style="text-align:right" class="v-mut">$${tW.toFixed(0)}</td><td style="text-align:right"><span class="${tN>=0?"v-pos":"v-neg"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</span></td><td style="text-align:right"><span class="${tR>=0?"v-pos":"v-neg"}">${tR>=0?"+":""}${tR.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="v-mut">${tCashRate!=null?tCashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>
     </tbody></table>`;
   if(_pChart){_pChart.destroy();_pChart=null;}
   const sn={},sf={};keys.forEach(k=>{const[sp]=k.split("|");const d=PD[k][win];sn[sp]=(sn[sp]||0)+(d.wins-d.fees);sf[sp]=(sf[sp]||0)+d.fees;});
