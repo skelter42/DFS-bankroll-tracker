@@ -28,6 +28,7 @@ button{font-family:inherit;cursor:pointer;}
 .bp-t1{background:rgba(255,69,96,.08);border-color:rgba(255,69,96,.3);color:var(--re);}
 .bp-t10{background:rgba(245,163,32,.08);border-color:rgba(245,163,32,.3);color:var(--am);}
 .bp-t20{background:rgba(155,109,255,.08);border-color:rgba(155,109,255,.3);color:var(--pu);}
+.bp-stake{background:rgba(0,212,138,.04);border-color:rgba(0,212,138,.2);color:var(--gr);font-size:.58rem;gap:3px;}
 .bpdot{width:5px;height:5px;border-radius:50%;}
 .bench-inp{width:44px;background:transparent;border:none;border-bottom:1px dashed currentColor;color:inherit;font-family:"IBM Plex Mono",monospace;font-size:.63rem;text-align:center;outline:none;padding:0 1px;-moz-appearance:textfield;}
 .bench-inp::-webkit-inner-spin-button,.bench-inp::-webkit-outer-spin-button{-webkit-appearance:none;}
@@ -291,6 +292,12 @@ button{font-family:inherit;cursor:pointer;}
       <span style="color:var(--t2)">Bankroll</span>
       <span style="color:var(--t2)">$</span><input class="bench-inp" id="bankrollInp" type="number" min="10" max="1000000" step="50" style="width:56px;color:var(--gr)">
     </div>
+    <div class="bp bp-stake" title="Stake % of bankroll by recommendation">
+      <span style="color:var(--t2)">Stake%</span>
+      <span title="Increase">↑<input class="bench-inp" id="stakeInc" type="number" min="0.5" max="50" step="0.5" style="width:28px;color:var(--gr)">%</span>
+      <span title="Maintain">→<input class="bench-inp" id="stakeMnt" type="number" min="0.5" max="50" step="0.5" style="width:28px;color:var(--am)">%</span>
+      <span title="Reduce">↓<input class="bench-inp" id="stakeRed" type="number" min="0.5" max="50" step="0.5" style="width:28px;color:var(--re)">%</span>
+    </div>
     <button class="btn-upload" id="csvOpenBtn">↑ Import CSV</button>
   </div>
 </header>
@@ -492,6 +499,7 @@ let SP=new Set(["ALL"]),AR="top1";
 let PFM="ALL";
 let PWIN="T12M";
 let BANKROLL=0;
+let STAKE_PCT=(()=>{try{const s=JSON.parse(localStorage.getItem("dfs_stake_pct")||"null");return(s&&s.INCREASE!=null)?s:{INCREASE:8,MAINTAIN:4,REDUCE:1.5};}catch(e){return{INCREASE:8,MAINTAIN:4,REDUCE:1.5};}})();
 
 let PB_FILTER=null;
 let PNL_VIEW="detail";
@@ -536,7 +544,7 @@ function renderDashboard(){
   const totROI=totFees>0?r2(totNet/totFees*100):0;
   // Process score
   let scoreSum=0,scoreWt=0;
-  Object.keys(ED).forEach(k=>{const ed=ED[k],pd=PD[k];if(ed&&pd&&pd.ALL){scoreSum+=ed.score*pd.ALL.count;scoreWt+=pd.ALL.count;}});
+  Object.keys(ED).forEach(k=>{const ed=ED[k],pd=PD[k];if(ed&&pd){const ref=pd.T6M||pd.T12M||pd.ALL;if(ref){scoreSum+=ed.score*ref.count;scoreWt+=ref.count;}}});
   const pScore=scoreWt>0?Math.round(scoreSum/scoreWt):0;
   const sCol=pScore>=65?"#00d48a":pScore>=40?"#f5a320":"#ff4560";
   const sLbl=pScore>=65?"STRONG EDGE":pScore>=40?"DEVELOPING":"BELOW BENCH";
@@ -640,7 +648,7 @@ function renderDashboard(){
           <div class="pb-rec ${m.rc}">${p.rec}</div>
         </div>
         <div class="pb-reason">${p.reason}</div>
-        ${(()=>{if(!BANKROLL)return"";const pct={INCREASE:8,MAINTAIN:4,REDUCE:1.5,"SIT OUT":0}[p.rec]||0;const amt=r2(BANKROLL*pct/100);return pct>0?`<div class="pb-stake">Rec. stake <strong>$${amt.toFixed(0)}</strong> <span class="pb-stake-pct">${pct}% of bankroll</span></div>`:`<div class="pb-stake" style="color:#ff4560">$0 — sit this out</div>`;})()}
+        ${(()=>{if(!BANKROLL)return"";const pct=p.rec==="SIT OUT"?0:(STAKE_PCT[p.rec]||0);const amt=r2(BANKROLL*pct/100);return pct>0?`<div class="pb-stake">Rec. stake <strong>$${amt.toFixed(0)}</strong> <span class="pb-stake-pct">${pct}% of bankroll</span></div>`:`<div class="pb-stake" style="color:#ff4560">$0 — sit this out</div>`;})()}
       </div>
       <div class="pb-details">
         <div class="fp-pills" style="margin-bottom:8px">
@@ -649,10 +657,10 @@ function renderDashboard(){
           <span class="fp ${fp(ref.top20,BENCH.top20)}">T20% ${ref.top20.toFixed(1)} ${ref.top20>=BENCH.top20?"✓":"✗"}</span>
         </div>
         <div class="pb-stats">
-          <div class="pb-stat"><span class="pb-stat-lbl">Momentum</span><span class="pb-stat-val" style="color:${momCol}">${momLbl}</span></div>
-          ${ed?`<div class="pb-stat"><span class="pb-stat-lbl">Edge Score</span><span class="pb-stat-val">${ed.score}/100</span></div>`:""}
-          <div class="pb-stat"><span class="pb-stat-lbl" title="Normalized composite delta vs benchmark">vs Benchmark</span><span class="pb-stat-val" style="color:${p.composite_delta>=0?"#00d48a":"#ff4560"}">${p.composite_delta>=0?"+":""}${p.composite_delta.toFixed(2)}</span></div>
+          ${ed?`<div class="pb-stat"><span class="pb-stat-lbl" title="65+=STRONG EDGE · 40-64=DEVELOPING · &lt;40=BELOW BENCH">Edge Score</span><span class="pb-stat-val" style="color:${ed.score>=65?"#00d48a":ed.score>=40?"#f5a320":"#ff4560"}">${ed.score}/100 <span style="font-size:.58rem;opacity:.7">${ed.score>=65?"STRONG":ed.score>=40?"DEVELOPING":"BELOW BENCH"}</span></span></div>`:""}
           <div class="pb-stat"><span class="pb-stat-lbl">Confidence</span><span class="pb-stat-val" style="color:#7880b8">${p.confidence} · ${ref.count.toLocaleString()} entries</span></div>
+          <div class="pb-stat"><span class="pb-stat-lbl">Momentum</span><span class="pb-stat-val" style="color:${momCol}">${momLbl}</span></div>
+          <div class="pb-stat"><span class="pb-stat-lbl" title="Normalized composite delta vs benchmark">vs Benchmark</span><span class="pb-stat-val" style="color:${p.composite_delta>=0?"#00d48a":"#ff4560"}">${p.composite_delta>=0?"+":""}${p.composite_delta.toFixed(2)}</span></div>
         </div>
       </div>
       <div class="pb-tog-row"><span class="pb-tog pb-tog-show">▼ details</span><span class="pb-tog pb-tog-hide">▲ collapse</span></div>
@@ -1270,6 +1278,13 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   (function(){const saved=localStorage.getItem("dfs_bankroll");if(saved){BANKROLL=parseFloat(saved)||0;bkInp.value=BANKROLL||"";}})();
   bkInp.addEventListener("change",()=>{BANKROLL=Math.max(0,parseFloat(bkInp.value)||0);bkInp.value=BANKROLL||"";try{localStorage.setItem("dfs_bankroll",BANKROLL);}catch(e){}renderDashboard();});
   bkInp.addEventListener("keydown",e=>{if(e.key==="Enter")bkInp.blur();});
+  // Stake % inputs
+  (function(){
+    const sInc=document.getElementById("stakeInc"),sMnt=document.getElementById("stakeMnt"),sRed=document.getElementById("stakeRed");
+    sInc.value=STAKE_PCT.INCREASE;sMnt.value=STAKE_PCT.MAINTAIN;sRed.value=STAKE_PCT.REDUCE;
+    function saveStake(){STAKE_PCT={INCREASE:Math.max(0.5,parseFloat(sInc.value)||8),MAINTAIN:Math.max(0.5,parseFloat(sMnt.value)||4),REDUCE:Math.max(0.5,parseFloat(sRed.value)||1.5)};sInc.value=STAKE_PCT.INCREASE;sMnt.value=STAKE_PCT.MAINTAIN;sRed.value=STAKE_PCT.REDUCE;try{localStorage.setItem("dfs_stake_pct",JSON.stringify(STAKE_PCT));}catch(e){}renderDashboard();}
+    [sInc,sMnt,sRed].forEach(inp=>{inp.addEventListener("change",saveStake);inp.addEventListener("keydown",e=>{if(e.key==="Enter")inp.blur();});});
+  })();
 })();
 
 recomputeScores();render();
