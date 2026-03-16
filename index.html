@@ -177,11 +177,15 @@ button{font-family:inherit;cursor:pointer;}
 .v-neg{font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:500;color:var(--re);}
 .v-mut{font-family:"IBM Plex Mono",monospace;font-size:.68rem;color:var(--t2);}
 .fr-mini-rows{display:flex;flex-direction:column;gap:3px;min-width:130px;}
+.fr-single{display:flex;flex-direction:column;gap:4px;min-width:110px;}
+.fr-sub{display:flex;gap:10px;font-family:"IBM Plex Mono",monospace;font-size:.58rem;}
 .fr-mini{display:flex;align-items:center;gap:5px;}
 .fr-mini-lbl{font-family:"IBM Plex Mono",monospace;font-size:.55rem;color:var(--t3);width:26px;}
-.fr-mini-track{flex:1;height:5px;background:var(--card2);border-radius:3px;overflow:hidden;}
+.fr-mini-track{height:5px;background:var(--card2);border-radius:3px;overflow:hidden;}
 .fr-mini-fill{height:100%;border-radius:3px;}
-.fr-mini-val{font-family:"IBM Plex Mono",monospace;font-size:.61rem;font-weight:500;min-width:34px;text-align:right;}
+.fr-mini-val{font-family:"IBM Plex Mono",monospace;font-size:.66rem;font-weight:600;min-width:34px;}
+.breakdown-tog{background:none;border:1px solid var(--bd);color:var(--t2);font-family:"IBM Plex Mono",monospace;font-size:.62rem;padding:5px 12px;border-radius:5px;cursor:pointer;transition:all .15s;}
+.breakdown-tog:hover{border-color:var(--b3);color:var(--tx);}
 .score-badge{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:7px;font-family:"IBM Plex Mono",monospace;font-size:.76rem;font-weight:600;border:1px solid;}
 .sb-hi{background:rgba(0,212,138,.1);color:var(--gr);border-color:rgba(0,212,138,.25);}
 .sb-md{background:rgba(77,143,255,.1);color:var(--bl);border-color:rgba(77,143,255,.25);}
@@ -208,7 +212,7 @@ button{font-family:inherit;cursor:pointer;}
 .ql-item{display:flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",monospace;font-size:.62rem;color:var(--t2);}
 .ql-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 /* PNL */
-.pnl-kpi{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+.pnl-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
 .pnl-tbl{width:100%;border-collapse:collapse;}
 .pnl-tbl thead tr{border-bottom:2px solid var(--b2);}
 .pnl-tbl th{padding:8px 14px;text-align:left;font-family:"IBM Plex Mono",monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.7px;color:var(--t3);white-space:nowrap;cursor:pointer;user-select:none;}
@@ -350,14 +354,17 @@ button{font-family:inherit;cursor:pointer;}
     </div>
     <div style="overflow-x:auto"><div id="perfTable"></div></div>
   </div>
-  <div class="sub-tables">
-    <div class="tbl-panel">
-      <div class="tbl-hdr"><div><div class="tbl-title">By Field Size</div><div class="tbl-sub">Small &lt;500 · Medium 500–5K · Large &gt;5K</div></div></div>
-      <div style="overflow-x:auto"><div id="fieldTable"></div></div>
-    </div>
-    <div class="tbl-panel">
-      <div class="tbl-hdr"><div><div class="tbl-title">By Stake Tier</div><div class="tbl-sub">Penny ≤$0.25 · Low ≤$2 · Mid ≤$5 · High &gt;$5</div></div></div>
-      <div style="overflow-x:auto"><div id="stakeTable"></div></div>
+  <div style="margin-top:10px">
+    <button class="breakdown-tog" id="breakdownTog" onclick="(function(){const s=document.getElementById('breakdownSect');const open=s.style.display==='none'||s.style.display==='';s.style.display=open?'grid':'none';document.getElementById('breakdownTog').textContent=open?'▲ Hide field &amp; stake breakdown':'▼ Show field &amp; stake breakdown';})()">▼ Show field &amp; stake breakdown</button>
+    <div class="sub-tables" id="breakdownSect" style="display:none;margin-top:10px">
+      <div class="tbl-panel">
+        <div class="tbl-hdr"><div><div class="tbl-title">By Field Size</div><div class="tbl-sub">Small &lt;500 · Medium 500–5K · Large &gt;5K</div></div></div>
+        <div style="overflow-x:auto"><div id="fieldTable"></div></div>
+      </div>
+      <div class="tbl-panel">
+        <div class="tbl-hdr"><div><div class="tbl-title">By Stake Tier</div><div class="tbl-sub">Penny ≤$0.25 · Low ≤$2 · Mid ≤$5 · High &gt;$5</div></div></div>
+        <div style="overflow-x:auto"><div id="stakeTable"></div></div>
+      </div>
     </div>
   </div>
 </div>
@@ -654,7 +661,6 @@ function renderDashboard(){
           <div class="pb-rec ${m.rc}">${p.rec}</div>
         </div>
         <div class="pb-reason">${p.reason}</div>
-        <div class="pb-quick">T10% <strong style="color:${ref.top10>=BENCH.top10?"#00d48a":"#ff4560"}">${ref.top10.toFixed(1)}%</strong> &nbsp;·&nbsp; ROI <strong style="color:${ref.roi>=0?"#00d48a":"#ff4560"}">${ref.roi>=0?"+":""}${ref.roi.toFixed(1)}%</strong> &nbsp;·&nbsp; ${entLbl} entries</div>
       </div>
       <div class="pb-details">
         <div class="fp-pills" style="margin-bottom:8px">
@@ -687,17 +693,16 @@ function renderPerformance(){
   if(!rows.length){document.getElementById("perfTable").innerHTML=`<div class="no-data">No data for this time window — try a wider window</div>`;}
   else{
     document.getElementById("perfTable").innerHTML=`<table class="perf-tbl">
-      <thead><tr><th>Sport / Format</th><th class="r">Entries</th><th>Finish Rates vs Benchmark</th><th class="r">ROI</th><th class="r">Net</th><th class="r">Score</th></tr></thead>
+      <thead><tr><th>Sport / Format</th><th class="r">Entries</th><th>T10% Finish</th><th class="r">ROI</th><th class="r">Net</th><th class="r">Score</th></tr></thead>
       <tbody>${rows.map(({sp,fmt,d,ed})=>{
         const t1c=vc(d.top1,BENCH.top1),t10c=vc(d.top10,BENCH.top10),t20c=vc(d.top20,BENCH.top20);
         const sb=!ed?"sb-lo":ed.score>=65?"sb-hi":ed.score>=40?"sb-md":ed.score>=25?"sb-lo":"sb-vl";
         return`<tr>
           <td><div class="s-cell">${sl(sp)}${fc(fmt)}</div></td>
           <td style="text-align:right" class="v-mut">${d.count.toLocaleString()}</td>
-          <td><div class="fr-mini-rows">
-            <div class="fr-mini"><span class="fr-mini-lbl">T1%</span><div class="fr-mini-track"><div class="fr-mini-fill" style="width:${Math.min(d.top1/3*100,100)}%;background:${t1c}"></div></div><span class="fr-mini-val" style="color:${t1c}">${d.top1.toFixed(1)}%</span></div>
-            <div class="fr-mini"><span class="fr-mini-lbl">T10%</span><div class="fr-mini-track"><div class="fr-mini-fill" style="width:${Math.min(d.top10/24*100,100)}%;background:${t10c}"></div></div><span class="fr-mini-val" style="color:${t10c}">${d.top10.toFixed(1)}%</span></div>
-            <div class="fr-mini"><span class="fr-mini-lbl">T20%</span><div class="fr-mini-track"><div class="fr-mini-fill" style="width:${Math.min(d.top20/48*100,100)}%;background:${t20c}"></div></div><span class="fr-mini-val" style="color:${t20c}">${d.top20.toFixed(1)}%</span></div>
+          <td><div class="fr-single">
+            <div class="fr-mini"><div class="fr-mini-track" style="width:90px"><div class="fr-mini-fill" style="width:${Math.min(d.top10/24*100,100)}%;background:${t10c}"></div></div><span class="fr-mini-val" style="color:${t10c}">${d.top10.toFixed(1)}%</span></div>
+            <div class="fr-sub"><span style="color:${t1c}">T1% ${d.top1.toFixed(1)}</span><span style="color:${t20c}">T20% ${d.top20.toFixed(1)}</span></div>
           </div></td>
           <td style="text-align:right"><span class="${d.roi>=0?"v-pos":"v-neg"}">${d.roi>=0?"+":""}${d.roi.toFixed(1)}%</span></td>
           <td style="text-align:right"><span class="${d.net>=0?"v-pos":"v-neg"}">${d.net>=0?"+$":"-$"}${Math.abs(d.net).toFixed(0)}</span></td>
@@ -797,11 +802,9 @@ function renderPnl(){
   const sub=document.getElementById("pnlTblSub");if(sub)sub.textContent=winLabel+" · click headers to sort";
   const cashCol=tCashRate!=null?(tCashRate>=30?"#00d48a":tCashRate>=20?"#f5a320":"#ff4560"):"#3d4480";
   document.getElementById("pnlKpi").innerHTML=`
-    <div class="kpi-card kpi-neg"><div class="kpi-label">Fees Paid</div><div class="kpi-value" style="color:#ff4560">$${tF.toFixed(0)}</div><div class="kpi-sub">${tC.toLocaleString()} entries</div></div>
-    <div class="kpi-card kpi-neu"><div class="kpi-label">Returned</div><div class="kpi-value" style="color:#4d8fff">$${tW.toFixed(0)}</div><div class="kpi-sub">Prize winnings</div></div>
-    <div class="kpi-card ${tN>=0?"kpi-pos":"kpi-neg"}"><div class="kpi-label">Net P&amp;L</div><div class="kpi-value" style="color:${tN>=0?"#00d48a":"#ff4560"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</div><div class="kpi-sub">${tN>=0?"Profitable":"Net loss"}</div></div>
-    <div class="kpi-card ${tR>=0?"kpi-pos":"kpi-neg"}"><div class="kpi-label">ROI</div><div class="kpi-value" style="color:${tR>=0?"#00d48a":"#ff4560"}">${tR>=0?"+":""}${tR.toFixed(1)}%</div><div class="kpi-sub">Fees in vs prizes out</div></div>
-    <div class="kpi-card kpi-neu"><div class="kpi-label">Cash Rate</div><div class="kpi-value" style="color:${cashCol}">${tCashRate!=null?tCashRate.toFixed(1)+"%":"—"}</div><div class="kpi-sub">${tCashRate!=null?"Entries cashed":"Upload CSV"}</div></div>`;
+    <div class="kpi-card kpi-neg"><div class="kpi-label">Total Fees</div><div class="kpi-value" style="color:#ff4560">$${tF.toFixed(0)}</div><div class="kpi-sub">${tC.toLocaleString()} entries</div></div>
+    <div class="kpi-card ${tN>=0?"kpi-pos":"kpi-neg"}"><div class="kpi-label">Net P&amp;L</div><div class="kpi-value" style="color:${tN>=0?"#00d48a":"#ff4560"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</div><div class="kpi-sub">${tN>=0?"Profitable · $"+tW.toFixed(0)+" returned":"Net loss · $"+tW.toFixed(0)+" returned"}</div></div>
+    <div class="kpi-card ${tR>=0?"kpi-pos":"kpi-neg"}"><div class="kpi-label">ROI</div><div class="kpi-value" style="color:${tR>=0?"#00d48a":"#ff4560"}">${tR>=0?"+":""}${tR.toFixed(1)}%</div><div class="kpi-sub">Return on entry fees</div></div>`;
   let rows;
   if(PNL_VIEW==="sport"){
     const sp={};
@@ -811,14 +814,13 @@ function renderPnl(){
     rows=keys.map(k=>{const d=PD[k][win];const[sp,fmt]=k.split("|");return{sport:sp,format:fmt,count:d.count,fees:d.fees,wins:d.wins,net:r2(d.wins-d.fees),roi:d.fees>0?r2((d.wins-d.fees)/d.fees*100):0,cashRate:d.cashRate??null};});
   }
   rows.sort((a,b)=>b[PNL_SORT.col]*PNL_SORT.dir-a[PNL_SORT.col]*PNL_SORT.dir);
-  const mxN=Math.max(...rows.map(r=>Math.abs(r.net)),1);
   const showCash=rows.some(r=>r.cashRate!=null);
   const th=(col,lbl)=>`<th class="r" style="${PNL_SORT.col===col?"color:#4d8fff":""}" onclick="PNL_SORT={col:'${col}',dir:PNL_SORT.col==='${col}'?-PNL_SORT.dir:-1};renderPnl()">${lbl}${PNL_SORT.col===col?(PNL_SORT.dir>0?" ↑":" ↓"):""}</th>`;
   document.getElementById("pnlTable").innerHTML=`<table class="pnl-tbl">
     <thead><tr><th>${PNL_VIEW==="sport"?"Sport":"Sport / Format"}</th>${th("count","Entries")}${th("fees","Fees")}${th("wins","Returned")}${th("net","Net P&L")}${th("roi","ROI")}${showCash?th("cashRate","Cash%"):""}</tr></thead>
     <tbody>
-    ${rows.map(r=>{const cc=r.cashRate!=null?(r.cashRate>=30?"v-pos":r.cashRate>=20?"":"v-neg"):"v-mut";return`<tr><td><div class="s-cell">${sl(r.sport)}${r.format?fc(r.format):""}</div></td><td style="text-align:right" class="v-mut">${r.count.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${r.fees.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${r.wins.toFixed(0)}</td><td><div class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:${Math.abs(r.net)/mxN*100}%;background:${r.net>=0?"#00d48a":"#ff4560"}"></div></div><span class="${r.net>=0?"v-pos":"v-neg"}">${r.net>=0?"+$":"-$"}${Math.abs(r.net).toFixed(0)}</span></div></td><td style="text-align:right"><span class="${r.roi>=0?"v-pos":"v-neg"}">${r.roi>=0?"+":""}${r.roi.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="${cc}">${r.cashRate!=null?r.cashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>`;}).join("")}
-    <tr class="total-row"><td><strong>TOTAL</strong></td><td style="text-align:right" class="v-mut">${tC.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${tF.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${tW.toFixed(0)}</td><td><div class="bar-cell"><span class="${tN>=0?"v-pos":"v-neg"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</span></div></td><td style="text-align:right"><span class="${tR>=0?"v-pos":"v-neg"}">${tR>=0?"+":""}${tR.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="v-mut">${tCashRate!=null?tCashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>
+    ${rows.map(r=>{const cc=r.cashRate!=null?(r.cashRate>=30?"v-pos":r.cashRate>=20?"":"v-neg"):"v-mut";return`<tr><td><div class="s-cell">${sl(r.sport)}${r.format?fc(r.format):""}</div></td><td style="text-align:right" class="v-mut">${r.count.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${r.fees.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${r.wins.toFixed(0)}</td><td style="text-align:right"><span class="${r.net>=0?"v-pos":"v-neg"}">${r.net>=0?"+$":"-$"}${Math.abs(r.net).toFixed(0)}</span></td><td style="text-align:right"><span class="${r.roi>=0?"v-pos":"v-neg"}">${r.roi>=0?"+":""}${r.roi.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="${cc}">${r.cashRate!=null?r.cashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>`;}).join("")}
+    <tr class="total-row"><td><strong>TOTAL</strong></td><td style="text-align:right" class="v-mut">${tC.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${tF.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${tW.toFixed(0)}</td><td style="text-align:right"><span class="${tN>=0?"v-pos":"v-neg"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</span></td><td style="text-align:right"><span class="${tR>=0?"v-pos":"v-neg"}">${tR>=0?"+":""}${tR.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="v-mut">${tCashRate!=null?tCashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>
     </tbody></table>`;
   if(_pChart){_pChart.destroy();_pChart=null;}
   const sn={};keys.forEach(k=>{const[sp]=k.split("|");const d=PD[k][win];sn[sp]=(sn[sp]||0)+(d.wins-d.fees);});
