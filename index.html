@@ -688,7 +688,14 @@ function renderDashboard(){
 }
 
 /* ── PERFORMANCE ───────────────────────────────────────── */
+function syncSportChips(){
+  const sc=document.getElementById("perfSport");if(!sc)return;
+  const known=new Set(Array.from(sc.querySelectorAll("[data-sport]")).map(c=>c.dataset.sport));
+  const dataSports=new Set(Object.keys(PD).map(k=>k.split("|")[0]));
+  dataSports.forEach(s=>{if(!known.has(s)){const c=document.createElement("div");c.className="chip"+(SP.has(s)?" on":"");c.dataset.sport=s;c.textContent=s;c.setAttribute("tabindex","0");c.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();c.click();}});sc.appendChild(c);}});
+}
 function renderPerformance(){
+  syncSportChips();
   const keys=perfKeys();
   if(!keys.length){document.getElementById("perfTable").innerHTML=`<div class="no-data">No data for current filters</div>`;renderFieldTable();renderStakeTable();return;}
   const win=PWIN;
@@ -782,7 +789,7 @@ function renderQuadrant(){
     const ed=ED[k],mo=MOD[k],pd=PD[k];if(!ed||!mo||!pd)return null;
     const ref=pd.T6M||pd.T12M||pd.ALL;if(!ref||!ref.count)return null;
     const b1=ed.b1_delta,b10=ed.b10_delta,b20=ed.b20_delta;
-    const x=r2((b10/B_.top10)*.50+(b20/B_.top20)*.30+(b1/B_.top1)*.20);
+    const x=r2(((B_.top10>0?b10/B_.top10:0)*.50)+((B_.top20>0?b20/B_.top20:0)*.30)+((B_.top1>0?b1/B_.top1:0)*.20));
     const y=r2((mo.slope10||0)*.5+(mo.slope20||0)*.3+(mo.slope1||0)*.2);
     const r=Math.max(6,Math.min(26,Math.sqrt(ref.count)*.55));
     const ok=x>=0,imp=y>0.05;
@@ -1251,7 +1258,7 @@ document.getElementById("cumMode").addEventListener("click",e=>{const b=e.target
           const existingKeys=new Set(USER_ROWS.map(rk));
           const newRows=rows.filter(r=>!existingKeys.has(rk(r)));
           const dupes=rows.length-newRows.length;
-          if(!newRows.length){status.className="csv-status";status.textContent=rows.length.toLocaleString()+" entries already loaded (all duplicates). No changes made.";document.getElementById("csvFile").value="";return;}
+          if(!newRows.length){status.className="csv-status err";status.style.background="rgba(245,163,32,.09)";status.style.borderColor="rgba(245,163,32,.25)";status.style.color="#f5a320";status.textContent="⚠ All "+rows.length.toLocaleString()+" entries already exist — no changes made. Try a different file or check for duplicates.";document.getElementById("csvFile").value="";return;}
           USER_ROWS=USER_ROWS.concat(newRows);USER_FILE_COUNT++;
           saveToStorage();
           const d=computeAll(USER_ROWS);applyData(d);
