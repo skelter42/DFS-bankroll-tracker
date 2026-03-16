@@ -29,6 +29,9 @@ button{font-family:inherit;cursor:pointer;}
 .bp-t10{background:rgba(245,163,32,.08);border-color:rgba(245,163,32,.3);color:var(--am);}
 .bp-t20{background:rgba(155,109,255,.08);border-color:rgba(155,109,255,.3);color:var(--pu);}
 .bpdot{width:5px;height:5px;border-radius:50%;}
+.bench-inp{width:32px;background:transparent;border:none;border-bottom:1px dashed currentColor;color:inherit;font-family:"IBM Plex Mono",monospace;font-size:.63rem;text-align:center;outline:none;padding:0 1px;-moz-appearance:textfield;}
+.bench-inp::-webkit-inner-spin-button,.bench-inp::-webkit-outer-spin-button{-webkit-appearance:none;}
+.bench-inp:focus{border-bottom-style:solid;}
 .btn-upload{display:flex;align-items:center;gap:6px;padding:7px 15px;border-radius:6px;border:1px solid rgba(77,143,255,.4);background:rgba(77,143,255,.09);color:var(--bl);font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:600;transition:all .15s;}
 .btn-upload:hover{background:rgba(77,143,255,.18);border-color:rgba(77,143,255,.7);}
 /* NAV */
@@ -251,20 +254,20 @@ button{font-family:inherit;cursor:pointer;}
   </div>
   <div class="header-right">
     <div class="bench-pills">
-      <div class="bp bp-t1"><div class="bpdot" style="background:var(--re)"></div>Top 1% → 1.2%</div>
-      <div class="bp bp-t10"><div class="bpdot" style="background:var(--am)"></div>Top 10% → 12%</div>
-      <div class="bp bp-t20"><div class="bpdot" style="background:var(--pu)"></div>Top 20% → 24%</div>
+      <div class="bp bp-t1"><div class="bpdot" style="background:var(--re)"></div>Top 1% → <input class="bench-inp" id="bInp1" type="number" min="0.1" max="10" step="0.1">%</div>
+      <div class="bp bp-t10"><div class="bpdot" style="background:var(--am)"></div>Top 10% → <input class="bench-inp" id="bInp10" type="number" min="1" max="40" step="0.5">%</div>
+      <div class="bp bp-t20"><div class="bpdot" style="background:var(--pu)"></div>Top 20% → <input class="bench-inp" id="bInp20" type="number" min="2" max="60" step="1">%</div>
     </div>
     <button class="btn-upload" id="csvOpenBtn">↑ Import CSV</button>
   </div>
 </header>
 <div class="csv-overlay" id="csvOverlay">
   <div class="csv-modal">
-    <div class="csv-modal-title">Import DraftKings CSV</div>
+    <div class="csv-modal-title">Import CSV <span style="font-size:.7rem;color:#3d4480;font-weight:400">(each upload appends)</span></div>
     <div class="csv-drop" id="csvDrop">
       <div class="csv-drop-icon">📂</div>
       <div class="csv-drop-main">Click to select or drag &amp; drop your CSV</div>
-      <div class="csv-drop-sub">DraftKings contest history — My Contests → Download</div>
+      <div class="csv-drop-sub">DraftKings · My Contests → Download CSV · multiple files stack</div>
       <input type="file" accept=".csv,text/csv" id="csvFile" style="display:none">
     </div>
     <div class="csv-info">
@@ -274,7 +277,9 @@ button{font-family:inherit;cursor:pointer;}
     </div>
     <div class="csv-status" id="csvStatus"></div>
     <div class="csv-btns">
-      <button class="csv-reset" id="csvReset">Reset to Sample Data</button>
+      <button class="csv-reset" id="csvExport" style="display:none">↓ Export CSV</button>
+      <button class="csv-reset" id="csvClear" style="display:none">✕ Clear All Data</button>
+      <button class="csv-reset" id="csvReset" style="display:none">Reset to Sample</button>
       <button class="csv-close" id="csvClose">Close</button>
     </div>
   </div>
@@ -432,9 +437,8 @@ const SD={"CBB|Classic": {"penny": {"count": 60, "fees": 6.0, "wins": 3.8, "net"
 const MOD={"CBB|Classic": {"slope1": 0, "slope10": 0, "slope20": 0, "months": 1, "n": 60}, "CBB|Showdown": {"slope1": 0, "slope10": 0, "slope20": 0, "months": 1, "n": 20}, "CFB|Classic": {"slope1": 0.0, "slope10": -2.2727, "slope20": -3, "months": 3, "n": 266}, "CFB|Showdown": {"slope1": 0, "slope10": 0, "slope20": 0, "months": 1, "n": 41}, "COD|Classic": {"slope1": -0.1163, "slope10": 1.3454, "slope20": 0.9983, "months": 5, "n": 333}, "CS|Classic": {"slope1": -0.1975, "slope10": -0.8021, "slope20": -1.5448, "months": 6, "n": 699}, "CS|Showdown": {"slope1": 0.0, "slope10": 1.9737, "slope20": 0.5263, "months": 3, "n": 133}, "F1|Classic": {"slope1": 0.6122, "slope10": -0.3987, "slope20": -3, "months": 6, "n": 1029}, "GOLF|Classic": {"slope1": -0.117, "slope10": -0.1743, "slope20": -1.1271, "months": 5, "n": 1920}, "GOLF|Showdown": {"slope1": -0.162, "slope10": -0.4922, "slope20": -0.6111, "months": 6, "n": 2422}, "LOL|Classic": {"slope1": -0.1017, "slope10": 2.2088, "slope20": 2.3006, "months": 5, "n": 2023}, "LOL|Showdown": {"slope1": 0, "slope10": 0, "slope20": 0, "months": 1, "n": 46}, "MLB|Best Ball": {"slope1": 0, "slope10": 0, "slope20": 0, "months": 0, "n": 20}, "MLB|Classic": {"slope1": 0.0444, "slope10": 0.311, "slope20": 0.0928, "months": 6, "n": 22458}, "MLB|Showdown": {"slope1": 0.4774, "slope10": 1.5764, "slope20": 2.0747, "months": 6, "n": 1954}, "MMA|Classic": {"slope1": 0.1263, "slope10": -0.5693, "slope20": -0.7242, "months": 6, "n": 1839}, "NAS|Classic": {"slope1": -0.0453, "slope10": -0.2152, "slope20": -0.0025, "months": 6, "n": 2783}, "NBA|Classic": {"slope1": -0.3489, "slope10": -0.444, "slope20": -0.0784, "months": 6, "n": 20623}, "NBA|Showdown": {"slope1": 0.1561, "slope10": 0.3063, "slope20": 1.3988, "months": 6, "n": 2787}, "NFL|Best Ball": {"slope1": 0, "slope10": 0, "slope20": 0, "months": 0, "n": 40}, "NFL|Classic": {"slope1": -0.2712, "slope10": -1.4182, "slope20": -1.8172, "months": 5, "n": 26992}, "NFL|Showdown": {"slope1": -0.0363, "slope10": -0.1708, "slope20": -0.5412, "months": 6, "n": 15275}, "NHL|Classic": {"slope1": -0.0883, "slope10": -0.5859, "slope20": 0.0986, "months": 6, "n": 8476}, "NHL|Showdown": {"slope1": -0.0907, "slope10": -0.548, "slope20": -0.4768, "months": 5, "n": 1286}, "SOC|Classic": {"slope1": 0.0, "slope10": -3, "slope20": -3, "months": 3, "n": 139}, "SOC|Showdown": {"slope1": 0, "slope10": 0, "slope20": 0, "months": 1, "n": 20}, "TEN|Classic": {"slope1": -0.0315, "slope10": 0.4103, "slope20": 0.0958, "months": 6, "n": 4559}, "UFL|Classic": {"slope1": 0.0729, "slope10": 3, "slope20": 3, "months": 4, "n": 394}, "UFL|Showdown": {"slope1": 0, "slope10": 0, "slope20": 0, "months": 1, "n": 91}};
 const ED={};
 const PB={};
-const PNL={"CBB|Classic": {"sport": "CBB", "format": "Classic", "count": 60, "fees": 6.0, "wins": 3.8, "net": -2.2, "roi": -36.7}, "CBB|Showdown": {"sport": "CBB", "format": "Showdown", "count": 20, "fees": 2.0, "wins": 0.4, "net": -1.6, "roi": -80.0}, "CFB|Classic": {"sport": "CFB", "format": "Classic", "count": 266, "fees": 153.0, "wins": 81.48, "net": -71.52, "roi": -46.7}, "CFB|Showdown": {"sport": "CFB", "format": "Showdown", "count": 41, "fees": 7.0, "wins": 6.15, "net": -0.85, "roi": -12.1}, "COD|Classic": {"sport": "COD", "format": "Classic", "count": 333, "fees": 312.5, "wins": 319.97, "net": 7.47, "roi": 2.4}, "CS|Classic": {"sport": "CS", "format": "Classic", "count": 699, "fees": 730.9, "wins": 799.4, "net": 68.5, "roi": 9.4}, "CS|Showdown": {"sport": "CS", "format": "Showdown", "count": 133, "fees": 136.95, "wins": 203.43, "net": 66.48, "roi": 48.5}, "F1|Classic": {"sport": "F1", "format": "Classic", "count": 1029, "fees": 485.25, "wins": 537.76, "net": 52.51, "roi": 10.8}, "GOLF|Classic": {"sport": "GOLF", "format": "Classic", "count": 1920, "fees": 1014.0, "wins": 923.56, "net": -90.44, "roi": -8.9}, "GOLF|Showdown": {"sport": "GOLF", "format": "Showdown", "count": 2422, "fees": 904.95, "wins": 927.12, "net": 22.17, "roi": 2.4}, "LOL|Classic": {"sport": "LOL", "format": "Classic", "count": 2023, "fees": 1556.25, "wins": 1146.36, "net": -409.89, "roi": -26.3}, "LOL|Showdown": {"sport": "LOL", "format": "Showdown", "count": 46, "fees": 49.5, "wins": 44.31, "net": -5.19, "roi": -10.5}, "MLB|Best Ball": {"sport": "MLB", "format": "Best Ball", "count": 20, "fees": 40.45, "wins": 32.95, "net": -7.5, "roi": -18.5}, "MLB|Classic": {"sport": "MLB", "format": "Classic", "count": 22458, "fees": 10356.2, "wins": 9970.58, "net": -385.62, "roi": -3.7}, "MLB|Showdown": {"sport": "MLB", "format": "Showdown", "count": 1954, "fees": 711.5, "wins": 561.53, "net": -149.97, "roi": -21.1}, "MMA|Classic": {"sport": "MMA", "format": "Classic", "count": 1839, "fees": 771.0, "wins": 783.36, "net": 12.36, "roi": 1.6}, "NAS|Classic": {"sport": "NAS", "format": "Classic", "count": 2783, "fees": 1413.05, "wins": 1199.43, "net": -213.62, "roi": -15.1}, "NBA|Classic": {"sport": "NBA", "format": "Classic", "count": 20623, "fees": 13540.8, "wins": 15638.5, "net": 2097.7, "roi": 15.5}, "NBA|Showdown": {"sport": "NBA", "format": "Showdown", "count": 2787, "fees": 1721.5, "wins": 1297.46, "net": -424.04, "roi": -24.6}, "NFL|Best Ball": {"sport": "NFL", "format": "Best Ball", "count": 40, "fees": 768.57, "wins": 455.44, "net": -313.13, "roi": -40.7}, "NFL|Classic": {"sport": "NFL", "format": "Classic", "count": 26992, "fees": 17860.7, "wins": 19361.06, "net": 1500.36, "roi": 8.4}, "NFL|Showdown": {"sport": "NFL", "format": "Showdown", "count": 15275, "fees": 11391.25, "wins": 11523.33, "net": 132.08, "roi": 1.2}, "NHL|Classic": {"sport": "NHL", "format": "Classic", "count": 8476, "fees": 3488.2, "wins": 3254.32, "net": -233.88, "roi": -6.7}, "NHL|Showdown": {"sport": "NHL", "format": "Showdown", "count": 1286, "fees": 619.35, "wins": 695.9, "net": 76.55, "roi": 12.4}, "SOC|Classic": {"sport": "SOC", "format": "Classic", "count": 139, "fees": 60.7, "wins": 56.9, "net": -3.8, "roi": -6.3}, "SOC|Showdown": {"sport": "SOC", "format": "Showdown", "count": 20, "fees": 5.0, "wins": 1.0, "net": -4.0, "roi": -80.0}, "TEN|Classic": {"sport": "TEN", "format": "Classic", "count": 4559, "fees": 1718.4, "wins": 1755.68, "net": 37.28, "roi": 2.2}, "UFL|Classic": {"sport": "UFL", "format": "Classic", "count": 394, "fees": 242.5, "wins": 312.09, "net": 69.59, "roi": 28.7}, "UFL|Showdown": {"sport": "UFL", "format": "Showdown", "count": 91, "fees": 19.0, "wins": 31.9, "net": 12.9, "roi": 67.9}};
 
-const BENCH={top1:1.2,top10:12,top20:24};
+const BENCH=(()=>{const _b=JSON.parse(localStorage.getItem("dfs_bench")||"null");return(_b&&_b.top1&&_b.top10&&_b.top20)?_b:{top1:1.2,top10:12,top20:24};})();
 const BC={top1:"#f03e5c",top10:"#f0a030",top20:"#9b6dff"};
 const WINS=["T1M","T6M","T12M","ALL"];
 const SL={NAS:"NASCAR",TEN:"TENNIS",LOL:"LOL",CS:"CS:GO",COD:"COD",F1:"F1",SOC:"SOCCER",UFL:"UFL",GOLF:"GOLF",CBB:"CBB",CFB:"CFB"};
@@ -755,7 +759,7 @@ function renderQuadrant(){
   const keys=Object.keys(ED).filter(k=>{const[sp]=k.split("|");return SP.has("ALL")||SP.has(sp);});
   if(_qChart){_qChart.destroy();_qChart=null;}
   const ctx=document.getElementById("quadrantChart").getContext("2d");
-  const B_={top1:1.2,top10:12,top20:24};
+  const B_=BENCH;
   const pts=keys.map(k=>{
     const ed=ED[k],mo=MOD[k],pd=PD[k];if(!ed||!mo||!pd)return null;
     const ref=pd.T6M||pd.T12M||pd.ALL;if(!ref||!ref.count)return null;
@@ -1011,7 +1015,7 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
     const T1=now-30*24*3600*1000,T6=now-182*24*3600*1000,T12=now-365*24*3600*1000;
     const groups={};
     entries.forEach(e=>{const k=e.sport+"|"+e.format;if(!groups[k])groups[k]=[];groups[k].push(e);});
-    const nPD={},nMD={},nSD={},nFD={},nPNL={};
+    const nPD={},nMD={},nSD={},nFD={};
     Object.keys(groups).forEach(k=>{
       const g=groups[k];
       nPD[k]={T1M:buildWindow(g,T1),T6M:buildWindow(g,T6),T12M:buildWindow(g,T12),ALL:buildWindow(g,-Infinity)};
@@ -1032,8 +1036,7 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
       const sizes={small:[],medium:[],large:[]};
       g.forEach(e=>{if(e.totalTeams>0)sizes[fieldToSize(e.totalTeams)].push(e);});
       nFD[k]={};Object.keys(sizes).forEach(s=>{if(sizes[s].length)nFD[k][s]=buildWindow(sizes[s],-Infinity);});
-      const all=nPD[k].ALL;const[sp,fmt]=k.split("|");
-      if(all)nPNL[k]={sport:sp,format:fmt,count:all.count,fees:all.fees,wins:all.wins,net:all.net,roi:all.roi};
+
     });
     const nMOD={};
     Object.keys(nMD).forEach(k=>{
@@ -1047,7 +1050,7 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
       }
       nMOD[k]={slope1:slope(months,"top1"),slope10:slope(months,"top10"),slope20:slope(months,"top20"),months:months.length,n:(nPD[k].ALL||{}).count||0};
     });
-    const B_={top1:1.2,top10:12,top20:24};
+    const B_=BENCH;
     const nED={};
     Object.keys(nPD).forEach(k=>{
       const pd=nPD[k],mo=nMOD[k],ref=pd.T6M||pd.T12M||pd.ALL;
@@ -1092,19 +1095,19 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
         ref:{top1:ref.top1,top10:ref.top10,top20:ref.top20,roi:ref.roi,net:ref.net,count:ref.count},
         b1,b10,b20,mom,composite_delta:cd};
     });
-    return{nPD,nMD,nSD,nFD,nMOD,nED,nPB,nPNL};
+    return{nPD,nMD,nSD,nFD,nMOD,nED,nPB};
   }
 
   const ORIG={PD:JSON.parse(JSON.stringify(PD)),MD:JSON.parse(JSON.stringify(MD)),
     FD:JSON.parse(JSON.stringify(FD)),SD:JSON.parse(JSON.stringify(SD)),
     MOD:JSON.parse(JSON.stringify(MOD)),ED:JSON.parse(JSON.stringify(ED)),
-    PB:JSON.parse(JSON.stringify(PB)),PNL:JSON.parse(JSON.stringify(PNL))};
+    PB:JSON.parse(JSON.stringify(PB))};
 
   function applyObj(target,src){Object.keys(target).forEach(k=>{if(!src[k])delete target[k];});Object.assign(target,src);}
 
   function applyData(d){
     applyObj(PD,d.nPD);applyObj(MD,d.nMD);applyObj(FD,d.nFD);applyObj(SD,d.nSD);
-    applyObj(MOD,d.nMOD);applyObj(ED,d.nED);applyObj(PB,d.nPB);applyObj(PNL,d.nPNL);
+    applyObj(MOD,d.nMOD);applyObj(ED,d.nED);applyObj(PB,d.nPB);
     const total=Object.values(d.nPD).reduce((a,p)=>a+(p.ALL?p.ALL.count:0),0);
     const sports=new Set(Object.keys(d.nPD).map(k=>k.split("|")[0])).size;
     const latest=Object.values(d.nMD).flat().map(m=>m.month).sort().pop()||"";
@@ -1114,30 +1117,81 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
 
   function resetData(){
     applyObj(PD,ORIG.PD);applyObj(MD,ORIG.MD);applyObj(FD,ORIG.FD);applyObj(SD,ORIG.SD);
-    applyObj(MOD,ORIG.MOD);applyObj(PNL,ORIG.PNL);
+    applyObj(MOD,ORIG.MOD);
     const es2=document.getElementById("entrySummary");if(es2)es2.textContent="118,728 entries · 16 sports · sample data";
     recomputeScores();render();
   }
 
-  function processFile(file){
+  // Raw rows accumulated across uploads — persisted to localStorage
+  let USER_ROWS=[];let USER_FILE_COUNT=0;
+  const LS_ROWS="dfs_rows",LS_COUNT="dfs_file_count";
+
+  function showUploadButtons(hasData){
+    document.getElementById("csvExport").style.display=hasData?"inline-block":"none";
+    document.getElementById("csvClear").style.display=hasData?"inline-block":"none";
+    document.getElementById("csvReset").style.display=hasData?"inline-block":"none";
+  }
+
+  function saveToStorage(){try{localStorage.setItem(LS_ROWS,JSON.stringify(USER_ROWS));localStorage.setItem(LS_COUNT,USER_FILE_COUNT);}catch(e){}}
+
+  function loadFromStorage(){
+    try{
+      const saved=localStorage.getItem(LS_ROWS);
+      if(!saved)return;
+      const rows=JSON.parse(saved);
+      if(!rows||!rows.length)return;
+      USER_ROWS=rows;USER_FILE_COUNT=parseInt(localStorage.getItem(LS_COUNT)||"1",10);
+      const d=computeAll(USER_ROWS);applyData(d);
+      const status=document.getElementById("csvStatus");
+      const keys=new Set(USER_ROWS.map(r=>r.sport+"|"+r.format)).size;
+      status.className="csv-status ok";
+      status.textContent="✓ Restored "+USER_ROWS.length.toLocaleString()+" entries ("+keys+" combos) from last session.";
+      showUploadButtons(true);
+    }catch(e){}
+  }
+
+  function exportCSV(){
+    if(!USER_ROWS.length)return;
+    const hdr="Sport,Format,YearMonth,Date,Place,Winnings,Fee,TotalTeams";
+    const lines=USER_ROWS.map(r=>[r.sport,r.format,r.ym,new Date(r.dateMs).toISOString().slice(0,10),r.place,r.winnings,r.fee,r.totalTeams].join(","));
+    const blob=new Blob([hdr+"\n"+lines.join("\n")],{type:"text/csv"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+    a.download="dfs_export_"+new Date().toISOString().slice(0,10)+".csv";a.click();URL.revokeObjectURL(a.href);
+  }
+
+  function clearUserData(){
+    USER_ROWS=[];USER_FILE_COUNT=0;
+    try{localStorage.removeItem(LS_ROWS);localStorage.removeItem(LS_COUNT);}catch(e){}
     const status=document.getElementById("csvStatus");
     status.className="csv-status";status.textContent="";
+    showUploadButtons(false);
+    resetData();
+  }
+
+  function processFile(file){
+    const status=document.getElementById("csvStatus");
+    status.className="csv-status";
     if(!file||!file.name.endsWith(".csv")){status.className="csv-status err";status.textContent="Please select a .csv file.";return;}
-    status.className="csv-status";status.textContent="Processing…";
+    status.textContent="Processing…";
     const reader=new FileReader();
     reader.onload=function(e){
-      try{
-      const rows=parseCSVText(e.target.result);
-      if(rows.error){status.className="csv-status err";status.textContent="Error: "+rows.error;return;}
-      if(!rows.length){status.className="csv-status err";status.textContent="No valid entries found. Check column names and sport values.";return;}
-      const d=computeAll(rows);
-      applyData(d);
-      const hasField=rows.some(r=>r.totalTeams>0);
-      const keys=new Set(rows.map(r=>r.sport+"|"+r.format)).size;
-      status.className="csv-status ok";
-      status.textContent="✓ Loaded "+rows.length.toLocaleString()+" entries across "+keys+" sport/format combos."+(hasField?"":" Tip: add a '# Teams' column for top% finish rates.");
-      document.getElementById("csvReset").style.display="inline-block";
-      }catch(err){status.className="csv-status err";status.textContent="Error processing file: "+err.message;}
+      setTimeout(function(){
+        try{
+          const rows=parseCSVText(e.target.result);
+          if(rows.error){status.className="csv-status err";status.textContent="Error: "+rows.error;return;}
+          if(!rows.length){status.className="csv-status err";status.textContent="No valid entries found. Check column names and sport values.";return;}
+          USER_ROWS=USER_ROWS.concat(rows);USER_FILE_COUNT++;
+          saveToStorage();
+          const d=computeAll(USER_ROWS);applyData(d);
+          const hasField=rows.some(r=>r.totalTeams>0);
+          const keys=new Set(USER_ROWS.map(r=>r.sport+"|"+r.format)).size;
+          const plural=USER_FILE_COUNT>1?" ("+USER_FILE_COUNT+" files)":"";
+          status.className="csv-status ok";
+          status.textContent="✓ "+rows.length.toLocaleString()+" added · "+USER_ROWS.length.toLocaleString()+" total · "+keys+" combos"+plural+(hasField?"":" · Tip: add # Teams for finish rates");
+          showUploadButtons(true);
+          document.getElementById("csvFile").value="";
+        }catch(err){status.className="csv-status err";status.textContent="Error: "+err.message;}
+      },10);
     };
     reader.onerror=function(){status.className="csv-status err";status.textContent="Failed to read file.";};
     reader.readAsText(file);
@@ -1151,7 +1205,28 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   document.getElementById("csvDrop").addEventListener("dragover",e=>{e.preventDefault();e.currentTarget.classList.add("drag");});
   document.getElementById("csvDrop").addEventListener("dragleave",e=>e.currentTarget.classList.remove("drag"));
   document.getElementById("csvDrop").addEventListener("drop",e=>{e.preventDefault();e.currentTarget.classList.remove("drag");processFile(e.dataTransfer.files[0]);});
-  document.getElementById("csvReset").addEventListener("click",()=>{resetData();document.getElementById("csvStatus").className="csv-status";document.getElementById("csvReset").style.display="none";});
+  document.getElementById("csvExport").addEventListener("click",exportCSV);
+  document.getElementById("csvClear").addEventListener("click",clearUserData);
+  document.getElementById("csvReset").addEventListener("click",()=>{clearUserData();});
+  loadFromStorage();
+})();
+
+// ── Editable benchmarks ───────────────────────────────────────────────────────
+(function(){
+  const i1=document.getElementById("bInp1"),i10=document.getElementById("bInp10"),i20=document.getElementById("bInp20");
+  function syncInputs(){i1.value=BENCH.top1;i10.value=BENCH.top10;i20.value=BENCH.top20;}
+  function applyBench(key,inp,min,max){
+    const v=parseFloat(inp.value);
+    if(isNaN(v)||v<min||v>max){inp.value=BENCH[key];return;}
+    BENCH[key]=v;
+    try{localStorage.setItem("dfs_bench",JSON.stringify(BENCH));}catch(e){}
+    recomputeScores();render();
+  }
+  i1.addEventListener("change",()=>applyBench("top1",i1,0.1,10));
+  i10.addEventListener("change",()=>applyBench("top10",i10,1,40));
+  i20.addEventListener("change",()=>applyBench("top20",i20,2,60));
+  [i1,i10,i20].forEach(inp=>inp.addEventListener("keydown",e=>{if(e.key==="Enter")inp.blur();}));
+  syncInputs();
 })();
 
 recomputeScores();render();
