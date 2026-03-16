@@ -135,7 +135,9 @@ button{font-family:inherit;cursor:pointer;}
 .pr-mnt{color:var(--bl);}
 .pr-red{color:var(--am);}
 .pr-out{color:var(--re);}
-.pb-reason{font-size:.76rem;color:var(--t2);line-height:1.45;margin-bottom:10px;}
+.pb-reason{font-size:.76rem;color:var(--t2);line-height:1.45;margin-bottom:6px;}
+.pb-mini-stat{font-family:"IBM Plex Mono",monospace;font-size:.6rem;color:var(--t3);margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;}
+.pb-mini-stat span{color:var(--t2);}
 .fp-pills{display:flex;gap:4px;flex-wrap:wrap;}
 .fp{font-family:"IBM Plex Mono",monospace;font-size:.58rem;padding:1px 5px;border-radius:3px;}
 .fp-ok{background:rgba(0,212,138,.1);color:var(--gr);border:1px solid rgba(0,212,138,.2);}
@@ -180,6 +182,7 @@ button{font-family:inherit;cursor:pointer;}
 .s-cell{display:flex;align-items:center;gap:6px;}
 .s-tag{font-family:"IBM Plex Mono",monospace;font-size:.62rem;font-weight:600;padding:2px 6px;border-radius:3px;background:rgba(77,143,255,.09);border:1px solid rgba(77,143,255,.2);color:var(--bl);}
 .no-data{padding:36px;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:.73rem;color:var(--t3);}
+.tbl-scroll{overflow-x:auto;background:linear-gradient(to right,var(--card) 30px,transparent) left,linear-gradient(to left,var(--card) 30px,transparent) right,radial-gradient(farthest-side at 0 50%,rgba(0,0,0,.25),transparent) left,radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,.25),transparent) right;background-size:50px 100%,50px 100%,14px 100%,14px 100%;background-repeat:no-repeat;background-attachment:local,local,scroll,scroll;}
 .v-pos{font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:500;color:var(--gr);}
 .v-neg{font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:500;color:var(--re);}
 .v-mut{font-family:"IBM Plex Mono",monospace;font-size:.68rem;color:var(--t2);}
@@ -254,7 +257,7 @@ button{font-family:inherit;cursor:pointer;}
 .csv-reset:hover{background:rgba(255,69,96,.14);}
 /* RESPONSIVE */
 @media(max-width:1100px){.kpi-row{grid-template-columns:1fr 1fr;}.sub-tables{grid-template-columns:1fr;}.pnl-kpi{grid-template-columns:repeat(3,1fr);}.g2{grid-template-columns:1fr;}}
-@media(max-width:700px){.app-header,.app-nav,.app-main{padding-left:16px;padding-right:16px;}.kpi-row{grid-template-columns:1fr;}.pb-summary{grid-template-columns:1fr 1fr;}.pnl-kpi{grid-template-columns:1fr;}.bench-pills{display:none;}}
+@media(max-width:700px){.app-header,.app-nav,.app-main{padding-left:16px;padding-right:16px;}.kpi-row{grid-template-columns:1fr;}.pb-summary{grid-template-columns:1fr 1fr;}.pnl-kpi{grid-template-columns:1fr;}.bench-pills,.bp-stake{display:none;}}
 .pb-stake{font-family:"IBM Plex Mono",monospace;font-size:.63rem;color:var(--gr);margin-top:6px;padding:5px 9px;background:rgba(0,212,138,.06);border-radius:4px;}
 .pb-stake strong{font-size:.76rem;}
 .pb-stake-pct{color:var(--t2);font-size:.58rem;}
@@ -271,7 +274,9 @@ button{font-family:inherit;cursor:pointer;}
   .pnl-kpi{grid-template-columns:1fr;}
   .pb-summary{grid-template-columns:repeat(2,1fr);}
   .csv-modal{width:96%;padding:18px;}
-  .bench-pills{display:none;}
+  .bench-pills,.bp-stake{display:none;}
+  .ch300{height:220px;}
+  .ch340{height:260px;}
 }
 </style>
 </head>
@@ -350,6 +355,7 @@ button{font-family:inherit;cursor:pointer;}
       <div class="section-title">Weekly Playbook</div>
       <div class="section-sub">Action recommendations per sport/format · based on 6-month finish rates vs benchmarks + trend momentum</div>
     </div>
+    <div id="pbInsight" style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--t2);margin-bottom:10px;line-height:1.5"></div>
     <div class="pb-summary" id="pbSummary"></div>
     <div id="pbFilterNote" style="display:none;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--t2);margin-top:6px"><span></span><button onclick="PB_FILTER=null;renderDashboard()" style="background:none;border:1px solid var(--bd);color:var(--t3);font-family:'IBM Plex Mono',monospace;font-size:.58rem;padding:2px 8px;border-radius:4px;cursor:pointer">✕ clear</button></div>
     <div class="pb-grid" id="pbGrid"></div>
@@ -394,18 +400,18 @@ button{font-family:inherit;cursor:pointer;}
     <div class="tbl-hdr">
       <div><div class="tbl-title">Performance Breakdown</div><div class="tbl-sub">Finish rates vs rake benchmarks · Edge Score: benchmark(50) + trend(25) + confidence(25)</div></div>
     </div>
-    <div style="overflow-x:auto"><div id="perfTable"></div></div>
+    <div class="tbl-scroll"><div id="perfTable"></div></div>
   </div>
   <div style="margin-top:10px">
     <button class="breakdown-tog" id="breakdownTog" onclick="(function(){const s=document.getElementById('breakdownSect');const open=s.style.display==='none'||s.style.display==='';s.style.display=open?'grid':'none';document.getElementById('breakdownTog').textContent=open?'▲ Hide field &amp; stake breakdown':'▼ Show field &amp; stake breakdown';})()">▼ Show field &amp; stake breakdown</button>
     <div class="sub-tables" id="breakdownSect" style="display:none;margin-top:10px">
       <div class="tbl-panel">
         <div class="tbl-hdr"><div><div class="tbl-title">By Field Size</div><div class="tbl-sub">Small &lt;500 · Medium 500–5K · Large &gt;5K</div></div></div>
-        <div style="overflow-x:auto"><div id="fieldTable"></div></div>
+        <div class="tbl-scroll"><div id="fieldTable"></div></div>
       </div>
       <div class="tbl-panel">
         <div class="tbl-hdr"><div><div class="tbl-title">By Stake Tier</div><div class="tbl-sub">Penny ≤$0.25 · Low ≤$2 · Mid ≤$5 · High &gt;$5</div></div></div>
-        <div style="overflow-x:auto"><div id="stakeTable"></div></div>
+        <div class="tbl-scroll"><div id="stakeTable"></div></div>
       </div>
     </div>
   </div>
@@ -441,7 +447,7 @@ button{font-family:inherit;cursor:pointer;}
     </div>
   </div>
   <div class="chart-panel">
-    <div class="chart-hdr"><div><div class="tbl-title">Cumulative Bankroll P&amp;L</div><div class="tbl-sub">Running net profit/loss over time · upload CSV to populate</div></div></div>
+    <div class="chart-hdr"><div><div class="tbl-title">Cumulative Bankroll P&amp;L</div><div class="tbl-sub">Running net profit/loss over time · upload CSV to populate</div></div><div class="win-toggle" id="cumMode"><button class="win-btn active" data-mode="abs">$</button><button class="win-btn" data-mode="pct" title="% of bankroll (requires bankroll set)">%</button></div></div>
     <div class="chart-body"><div class="ch340"><canvas id="cumChart"></canvas></div></div>
   </div>
 </div>
@@ -463,11 +469,11 @@ button{font-family:inherit;cursor:pointer;}
         </div>
       </div>
     </div>
-    <div style="overflow-x:auto"><div id="pnlTable"></div></div>
+    <div class="tbl-scroll"><div id="pnlTable"></div></div>
   </div>
   <div class="g2">
     <div class="chart-panel">
-      <div class="chart-hdr"><div><div class="tbl-title">Net P&amp;L by Sport</div><div class="tbl-sub">Green = profitable · Red = losing</div></div></div>
+      <div class="chart-hdr"><div><div class="tbl-title">P&amp;L by Sport</div><div class="tbl-sub">Green = profitable · Red = losing</div></div><div class="win-toggle" id="pnlChartMode"><button class="win-btn active" data-mode="net">$</button><button class="win-btn" data-mode="roi">ROI%</button></div></div>
       <div class="chart-body"><div class="ch300"><canvas id="pnlChart"></canvas></div></div>
     </div>
     <div class="chart-panel">
@@ -492,19 +498,22 @@ const BC={top1:"#f03e5c",top10:"#f0a030",top20:"#9b6dff"};
 const WINS=["T1M","T6M","T12M","ALL"];
 const SL={NAS:"NASCAR",TEN:"TENNIS",LOL:"LOL",CS:"CS:GO",COD:"COD",F1:"F1",SOC:"SOCCER",UFL:"UFL",GOLF:"GOLF",CBB:"CBB",CFB:"CFB"};
 
-let SP=new Set(["ALL"]),AR="top1";
+let SP=(()=>{try{const a=JSON.parse(localStorage.getItem("dfs_sp")||"null");return a&&a.length?new Set(a):new Set(["ALL"]);}catch(e){return new Set(["ALL"]);}})();
+let AR=(()=>{try{return localStorage.getItem("dfs_ar")||"top1";}catch(e){return"top1";}})();
 
 /* ── OVERVIEW ──────────────────────────────────────────── */
 
-let PFM="ALL";
-let PWIN="T12M";
+let PFM=(()=>{try{return localStorage.getItem("dfs_pfm")||"ALL";}catch(e){return"ALL";}})();
+let PWIN=(()=>{try{return localStorage.getItem("dfs_pwin")||"T12M";}catch(e){return"T12M";}})();
 let BANKROLL=0;
 let STAKE_PCT=(()=>{try{const s=JSON.parse(localStorage.getItem("dfs_stake_pct")||"null");return(s&&s.INCREASE!=null)?s:{INCREASE:8,MAINTAIN:4,REDUCE:1.5};}catch(e){return{INCREASE:8,MAINTAIN:4,REDUCE:1.5};}})();
 
-let PB_FILTER=null;
-let PNL_VIEW="detail";
-let PNL_WIN="ALL";
+let PB_FILTER=(()=>{try{const v=localStorage.getItem("dfs_pb_filter");return v||null;}catch(e){return null;}})();
+let PNL_VIEW=(()=>{try{return localStorage.getItem("dfs_pnl_view")||"detail";}catch(e){return"detail";}})();
+let PNL_WIN=(()=>{try{return localStorage.getItem("dfs_pnl_win")||"ALL";}catch(e){return"ALL";}})();
 let PNL_SORT=(()=>{try{const s=JSON.parse(localStorage.getItem("pnl_sort")||"null");return(s&&s.col&&s.dir)?s:{col:"net",dir:-1};}catch(e){return{col:"net",dir:-1};}})();
+let CUM_MODE=(()=>{try{return localStorage.getItem("dfs_cum_mode")||"abs";}catch(e){return"abs";}})();
+let PNL_CHART_MODE=(()=>{try{return localStorage.getItem("dfs_pnl_chart_mode")||"net";}catch(e){return"net";}})();
 let _mChart=null,_qChart=null,_eChart=null,_pChart=null,_mPnlChart=null,_cumChart=null;
 
 function vc(v,b){return v>=b?"#00d48a":v>=b*.8?"#f5a320":"#ff4560";}
@@ -551,6 +560,16 @@ function renderDashboard(){
   // Aggregate finish rates
   const agg=wagg(keys,"ALL");
   const t1=agg?agg.top1:0,t10=agg?agg.top10:0,t20=agg?agg.top20:0;
+  // T6M (recent ~6mo) P&L
+  const t6Items=keys.map(k=>PD[k].T6M).filter(Boolean);
+  const t6Net=t6Items.length?r2(t6Items.reduce((a,x)=>a+x.wins,0)-t6Items.reduce((a,x)=>a+x.fees,0)):null;
+  const t6Ent=t6Items.reduce((a,x)=>a+x.count,0);
+  const t6ROI=t6Items.length&&t6Items.reduce((a,x)=>a+x.fees,0)>0?r2((t6Items.reduce((a,x)=>a+x.wins,0)-t6Items.reduce((a,x)=>a+x.fees,0))/t6Items.reduce((a,x)=>a+x.fees,0)*100):null;
+  // Winning/losing streak (consecutive profitable months)
+  const allMNet={};Object.keys(MD).forEach(k=>{(MD[k]||[]).forEach(m=>{if(m.net!=null){if(!allMNet[m.month])allMNet[m.month]=0;allMNet[m.month]=r2(allMNet[m.month]+m.net);}});});
+  const sortedMo=Object.keys(allMNet).sort();let streak=0;
+  if(sortedMo.length){const last=allMNet[sortedMo[sortedMo.length-1]]>=0;for(let i=sortedMo.length-1;i>=0;i--){if((allMNet[sortedMo[i]]>=0)===last){streak++;}else break;}}
+  const streakSign=sortedMo.length&&allMNet[sortedMo[sortedMo.length-1]]>=0?1:-1;
   const nCol=totNet>=0?"#00d48a":"#ff4560";
   const rCol=totROI>=0?"#00d48a":"#ff4560";
   const arc=2*Math.PI*28*(1-pScore/100);
@@ -569,6 +588,7 @@ function renderDashboard(){
           <div class="score-lbl">Process Score</div>
           <div class="score-title" style="color:${sCol}">${sLbl}</div>
           <div style="font-family:'IBM Plex Mono',monospace;font-size:.57rem;color:#3d4480;margin-top:3px">${totEnt.toLocaleString()} entries</div>
+          ${streak>0?`<div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:${streakSign>0?"#00d48a":"#ff4560"};margin-top:2px">${streak}mo ${streakSign>0?"winning":"losing"} streak</div>`:""}
           <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:#3d4480;margin-top:2px;line-height:1.35">Benchmark + trend + confidence</div>
         </div>
       </div>
@@ -583,10 +603,9 @@ function renderDashboard(){
       <div class="kpi-value" style="color:${rCol}">${totROI>=0?"+":""}${totROI.toFixed(1)}%</div>
       <div class="kpi-sub">${keys.length} sport/format combos tracked</div>
     </div>
-    <div class="kpi-card kpi-neu">
-      <div class="kpi-label" title="% of entries finishing in the top 10% of field — primary DFS cash line metric">Top 10% Finish Rate</div>
-      <div class="kpi-value" style="color:${vc(t10,BENCH.top10)}">${t10.toFixed(1)}%</div>
-      <div class="kpi-sub">Benchmark ${BENCH.top10}% · ${t10>=BENCH.top10?"✓ beating it":"✗ below it"}</div>
+    <div class="kpi-card ${t6Net==null?"kpi-neu":t6Net>=0?"kpi-pos":"kpi-neg"}">
+      <div class="kpi-label">Recent 6 Months</div>
+      ${t6Net!=null?`<div class="kpi-value" style="color:${t6Net>=0?"#00d48a":"#ff4560"}">${t6Net>=0?"+$":"−$"}${Math.abs(t6Net).toFixed(0)}</div><div class="kpi-sub">ROI ${t6ROI!=null?(t6ROI>=0?"+":"")+t6ROI.toFixed(1)+"%":"–"} · ${t6Ent.toLocaleString()} entries</div>`:`<div class="kpi-value" style="color:var(--t3)">–</div><div class="kpi-sub">No data in last 6 months</div>`}
     </div>`;
   document.getElementById("entrySummary").textContent=`${totEnt.toLocaleString()} total entries · ${new Set(keys.map(k=>k.split("|")[0])).size} sports`;
   // Finish rate bars
@@ -606,14 +625,23 @@ function renderDashboard(){
       <div class="fr-delta" style="color:${d>=0?"#00d48a":"#ff4560"}">${d>=0?"+":""}${d.toFixed(1)}pp</div>
     </div>`;
   }).join("");
-  // Playbook summary counts
+  // Playbook summary counts + insight
   const counts={INCREASE:0,MAINTAIN:0,REDUCE:0,"SIT OUT":0};
   Object.keys(PB).forEach(k=>{if(PB[k]&&PB[k].rec)counts[PB[k].rec]=(counts[PB[k].rec]||0)+1;});
+  (()=>{const ins=document.getElementById("pbInsight");if(!ins)return;
+    const pbKeys=Object.keys(PB).filter(k=>PB[k]);
+    const topInc=pbKeys.filter(k=>PB[k].rec==="INCREASE").sort((a,b)=>(ED[b]?.score||0)-(ED[a]?.score||0))[0];
+    const topOut=pbKeys.filter(k=>PB[k].rec==="SIT OUT").sort((a,b)=>(ED[a]?.score||0)-(ED[b]?.score||0))[0];
+    const parts=[];
+    if(topInc){const[s,f]=topInc.split("|");parts.push(`<span style="color:#00d48a">↑ Best edge: ${s} ${f} (score ${ED[topInc]?.score||0}/100)</span>`);}
+    if(topOut){const[s,f]=topOut.split("|");parts.push(`<span style="color:#ff4560">✕ Sit out: ${s} ${f} (score ${ED[topOut]?.score||0}/100)</span>`);}
+    ins.innerHTML=parts.join(" &nbsp;·&nbsp; ");
+  })();
   document.getElementById("pbSummary").innerHTML=`
-    <div class="pbs pbs-inc${PB_FILTER==="INCREASE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='INCREASE'?null:'INCREASE';renderDashboard()"><div class="pbs-num">${counts.INCREASE||0}</div><div class="pbs-lbl">↑ Increase</div></div>
-    <div class="pbs pbs-mnt${PB_FILTER==="MAINTAIN"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='MAINTAIN'?null:'MAINTAIN';renderDashboard()"><div class="pbs-num">${counts.MAINTAIN||0}</div><div class="pbs-lbl">→ Maintain</div></div>
-    <div class="pbs pbs-red${PB_FILTER==="REDUCE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='REDUCE'?null:'REDUCE';renderDashboard()"><div class="pbs-num">${counts.REDUCE||0}</div><div class="pbs-lbl">↓ Reduce</div></div>
-    <div class="pbs pbs-out${PB_FILTER==="SIT OUT"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='SIT OUT'?null:'SIT OUT';renderDashboard()"><div class="pbs-num">${counts["SIT OUT"]||0}</div><div class="pbs-lbl">✕ Sit Out</div></div>`;
+    <div class="pbs pbs-inc${PB_FILTER==="INCREASE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='INCREASE'?null:'INCREASE';try{localStorage.setItem('dfs_pb_filter',PB_FILTER||'')}catch(e){}renderDashboard()"><div class="pbs-num">${counts.INCREASE||0}</div><div class="pbs-lbl">↑ Increase</div></div>
+    <div class="pbs pbs-mnt${PB_FILTER==="MAINTAIN"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='MAINTAIN'?null:'MAINTAIN';try{localStorage.setItem('dfs_pb_filter',PB_FILTER||'')}catch(e){}renderDashboard()"><div class="pbs-num">${counts.MAINTAIN||0}</div><div class="pbs-lbl">→ Maintain</div></div>
+    <div class="pbs pbs-red${PB_FILTER==="REDUCE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='REDUCE'?null:'REDUCE';try{localStorage.setItem('dfs_pb_filter',PB_FILTER||'')}catch(e){}renderDashboard()"><div class="pbs-num">${counts.REDUCE||0}</div><div class="pbs-lbl">↓ Reduce</div></div>
+    <div class="pbs pbs-out${PB_FILTER==="SIT OUT"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='SIT OUT'?null:'SIT OUT';try{localStorage.setItem('dfs_pb_filter',PB_FILTER||'')}catch(e){}renderDashboard()"><div class="pbs-num">${counts["SIT OUT"]||0}</div><div class="pbs-lbl">✕ Sit Out</div></div>`;
   // Playbook cards
   const order={INCREASE:0,MAINTAIN:1,REDUCE:2,"SIT OUT":3};
   const sorted=Object.keys(PB).filter(k=>PB[k]&&(!PB_FILTER||PB[k].rec===PB_FILTER)).sort((a,b)=>{
@@ -634,20 +662,21 @@ function renderDashboard(){
     const entLbl=ref.count>=1000?(ref.count/1000).toFixed(1)+"K":ref.count;
     const momCol=p.mom>0.05?"#00d48a":p.mom<-0.05?"#ff4560":"#7880b8";
     const momLbl=p.mom>0.05?"↑ rising":p.mom<-0.05?"↓ falling":"→ flat";
-    return`<div class="pb-card ${m.cls}" onclick="this.classList.toggle('exp')">
+    return`<div class="pb-card ${m.cls}" tabindex="0" onclick="this.classList.toggle('exp')">
       <div class="pb-card-top">
         <div class="pb-head">
           <div style="display:flex;align-items:center;gap:7px">
             <span style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;color:#fff">${sp}</span>
             <span class="f-tag ${fc2}">${fmt}</span>
           </div>
-          <span class="conf-tag ${cc[p.confidence]||"ct-ins"}">${p.confidence}</span>
+          <span class="conf-tag ${cc[p.confidence]||"ct-ins"}" title="HIGH: 500+ entries · MEDIUM: 100-499 · LOW: 20-99 · INSUFFICIENT: &lt;20">${p.confidence}</span>
         </div>
         <div class="pb-rec-row">
           <div class="pb-icon ${m.ic}">${m.icon}</div>
           <div class="pb-rec ${m.rc}">${p.rec}</div>
         </div>
         <div class="pb-reason">${p.reason}</div>
+        <div class="pb-mini-stat">${(()=>{const parts=[];parts.push(`<span>${entLbl} entries</span>`);if(p.t1m&&p.t1m_count>=3){const mn=p.t1m.net;const mc=mn>=0?"#00d48a":"#ff4560";parts.push(`Last 30d: <span style="color:${mc}">${mn>=0?"+$":"−$"}${Math.abs(mn).toFixed(0)}</span> · ${p.t1m_count} entries`);}return parts.join(" · ");})()}</div>
         ${(()=>{if(!BANKROLL)return"";const pct=p.rec==="SIT OUT"?0:(STAKE_PCT[p.rec]||0);const amt=r2(BANKROLL*pct/100);return pct>0?`<div class="pb-stake">Rec. stake <strong>$${amt.toFixed(0)}</strong> <span class="pb-stake-pct">${pct}% of bankroll</span></div>`:`<div class="pb-stake" style="color:#ff4560">$0 — sit this out</div>`;})()}
       </div>
       <div class="pb-details">
@@ -669,7 +698,14 @@ function renderDashboard(){
 }
 
 /* ── PERFORMANCE ───────────────────────────────────────── */
+function syncSportChips(){
+  const sc=document.getElementById("perfSport");if(!sc)return;
+  const known=new Set(Array.from(sc.querySelectorAll("[data-sport]")).map(c=>c.dataset.sport));
+  const dataSports=new Set(Object.keys(PD).map(k=>k.split("|")[0]));
+  dataSports.forEach(s=>{if(!known.has(s)){const c=document.createElement("div");c.className="chip"+(SP.has(s)?" on":"");c.dataset.sport=s;c.textContent=s;c.setAttribute("tabindex","0");c.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();c.click();}});sc.appendChild(c);}});
+}
 function renderPerformance(){
+  syncSportChips();
   const keys=perfKeys();
   if(!keys.length){document.getElementById("perfTable").innerHTML=`<div class="no-data">No data for current filters</div>`;renderFieldTable();renderStakeTable();return;}
   const win=PWIN;
@@ -678,7 +714,11 @@ function renderPerformance(){
     const[sp,fmt]=k.split("|");
     return{k,sp,fmt,d,ed:ED[k]};
   }).filter(Boolean).sort((a,b)=>(b.ed?.score||0)-(a.ed?.score||0));
-  if(!rows.length){document.getElementById("perfTable").innerHTML=`<div class="no-data">No data for this time window — try a wider window</div>`;}
+  if(!rows.length){
+    const wins=["T1M","T6M","T12M","ALL"];const wLbl={"T1M":"1 month","T6M":"6 months","T12M":"12 months","ALL":"All time"};
+    const hasData=wins.find(w=>w!==win&&keys.some(k=>PD[k][w]));
+    document.getElementById("perfTable").innerHTML=`<div class="no-data">No entries in the ${wLbl[win]||win} window${hasData?` — ${wLbl[hasData]} has data`:""} · try a wider window or clear sport filters</div>`;
+  }
   else{
     document.getElementById("perfTable").innerHTML=`<table class="perf-tbl">
       <thead><tr><th>Sport / Format</th><th class="r">Entries</th><th>T10% Finish</th><th class="r">ROI</th><th class="r">Net</th><th class="r">Score</th></tr></thead>
@@ -759,7 +799,7 @@ function renderQuadrant(){
     const ed=ED[k],mo=MOD[k],pd=PD[k];if(!ed||!mo||!pd)return null;
     const ref=pd.T6M||pd.T12M||pd.ALL;if(!ref||!ref.count)return null;
     const b1=ed.b1_delta,b10=ed.b10_delta,b20=ed.b20_delta;
-    const x=r2((b10/B_.top10)*.50+(b20/B_.top20)*.30+(b1/B_.top1)*.20);
+    const x=r2(((B_.top10>0?b10/B_.top10:0)*.50)+((B_.top20>0?b20/B_.top20:0)*.30)+((B_.top1>0?b1/B_.top1:0)*.20));
     const y=r2((mo.slope10||0)*.5+(mo.slope20||0)*.3+(mo.slope1||0)*.2);
     const r=Math.max(6,Math.min(26,Math.sqrt(ref.count)*.55));
     const ok=x>=0,imp=y>0.05;
@@ -767,15 +807,15 @@ function renderQuadrant(){
     const bcol=ok&&imp?"#00d48a":ok&&!imp?"#f5a320":!ok&&imp?"#4d8fff":"#ff4560";
     return{x,y,r,col,bcol,k};
   }).filter(Boolean);
-  _qChart=new Chart(ctx,{type:"bubble",data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.col),borderColor:pts.map(p=>p.bcol),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(i){return pts[i[0].dataIndex]?.k||"";},label(i){const p=pts[i.dataIndex];return[`composite: ${p.x>=0?"+":""}${p.x.toFixed(3)}  mom: ${p.y>=0?"+":""}${p.y.toFixed(2)}`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Normalized Composite",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Momentum",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}}}},plugins:[{id:"q",afterDraw(chart){const{ctx,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;if(!x||!y)return;const cx=x.getPixelForValue(0),cy=y.getPixelForValue(0);ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(255,255,255,.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(right,cy);ctx.stroke();ctx.setLineDash([]);ctx.font="bold 8px IBM Plex Mono";ctx.globalAlpha=.3;ctx.textAlign="right";ctx.fillStyle="#00d48a";ctx.fillText("SCALE UP",right-6,top+12);ctx.textAlign="left";ctx.fillStyle="#4d8fff";ctx.fillText("TURNAROUND",left+6,top+12);ctx.fillStyle="#f5a320";ctx.textAlign="right";ctx.fillText("MONITOR",right-6,bottom-5);ctx.fillStyle="#ff4560";ctx.textAlign="left";ctx.fillText("EXIT",left+6,bottom-5);
-ctx.font="bold 7px IBM Plex Mono";ctx.globalAlpha=.85;ctx.fillStyle="#dce0ff";pts.forEach(p=>{const bx=chart.scales.x.getPixelForValue(p.x),by=chart.scales.y.getPixelForValue(p.y);const lbl=p.k.split("|")[0];ctx.textAlign="center";ctx.fillText(lbl,bx,by+p.r+9);});ctx.restore();}}]});
+  _qChart=new Chart(ctx,{type:"bubble",data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.col),borderColor:pts.map(p=>p.bcol),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(i){return pts[i[0].dataIndex]?.k||"";},label(i){const p=pts[i.dataIndex];const pb=PB[p.k];const rec=pb?pb.rec:"";return["composite: "+(p.x>=0?"+":"")+p.x.toFixed(3)+"  mom: "+(p.y>=0?"+":"")+p.y.toFixed(2),rec?"Rec: "+rec+" (score "+(ED[p.k]?.score||0)+"/100)":""];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Normalized Composite",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Momentum",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}}}},plugins:[{id:"q",afterDraw(chart){const{ctx,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;if(!x||!y)return;const cx=x.getPixelForValue(0),cy=y.getPixelForValue(0);ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(255,255,255,.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(right,cy);ctx.stroke();ctx.setLineDash([]);ctx.font="bold 8px IBM Plex Mono";ctx.globalAlpha=.3;ctx.textAlign="right";ctx.fillStyle="#00d48a";ctx.fillText("SCALE UP",right-6,top+12);ctx.textAlign="left";ctx.fillStyle="#4d8fff";ctx.fillText("TURNAROUND",left+6,top+12);ctx.fillStyle="#f5a320";ctx.textAlign="right";ctx.fillText("MONITOR",right-6,bottom-5);ctx.fillStyle="#ff4560";ctx.textAlign="left";ctx.fillText("EXIT",left+6,bottom-5);
+ctx.font="bold 7px IBM Plex Mono";ctx.globalAlpha=.85;ctx.fillStyle="#dce0ff";pts.forEach(p=>{const bx=chart.scales.x.getPixelForValue(p.x),by=chart.scales.y.getPixelForValue(p.y);const[ks,kf]=p.k.split("|");const fAbr=kf==="Classic"?"C":kf==="Showdown"?"SD":kf==="Best Ball"?"BB":"";const lbl=ks+(fAbr?" "+fAbr:"");ctx.textAlign="center";ctx.fillText(lbl,bx,by+p.r+9);});ctx.restore();}}]});
 }
 
 function renderEdgeChart(){
   const keys=Object.keys(ED).filter(k=>{const[sp]=k.split("|");return SP.has("ALL")||SP.has(sp);}).sort((a,b)=>(ED[b]?.score||0)-(ED[a]?.score||0)).slice(0,15);
   if(_eChart){_eChart.destroy();_eChart=null;}
   const ctx=document.getElementById("edgeChart").getContext("2d");
-  _eChart=new Chart(ctx,{type:"bar",data:{labels:keys.map(k=>k.replace("|"," ")),datasets:[{label:"Benchmark",data:keys.map(k=>ED[k]?.bench_component||0),backgroundColor:"rgba(77,143,255,.75)",borderRadius:3},{label:"Trend",data:keys.map(k=>ED[k]?.trend_component||0),backgroundColor:"rgba(0,212,138,.75)",borderRadius:3},{label:"Confidence",data:keys.map(k=>ED[k]?.confidence_component||0),backgroundColor:"rgba(155,109,255,.75)",borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"},boxWidth:10}},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{max:100,ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}}}}});
+  _eChart=new Chart(ctx,{type:"bar",data:{labels:keys.map(k=>k.replace("|"," ")),datasets:[{label:"Benchmark",data:keys.map(k=>ED[k]?.bench_component||0),backgroundColor:"rgba(77,143,255,.75)",borderRadius:3},{label:"Trend",data:keys.map(k=>ED[k]?.trend_component||0),backgroundColor:"rgba(0,212,138,.75)",borderRadius:3},{label:"Confidence",data:keys.map(k=>ED[k]?.confidence_component||0),backgroundColor:"rgba(155,109,255,.75)",borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"},boxWidth:10}},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{afterBody(items){if(!items.length)return[];const k=keys[items[0].dataIndex];const ed=ED[k];if(!ed)return[];const tot=ed.score;const lbl=tot>=65?"STRONG EDGE":tot>=40?"DEVELOPING":"BELOW BENCH";return["","Total: "+tot+"/100 2014 "+lbl];}}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{max:100,ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}}}}});
 }
 
 /* ── P&L ───────────────────────────────────────────────── */
@@ -809,31 +849,33 @@ function renderPnl(){
   const showCash=rows.some(r=>r.cashRate!=null);
   const th=(col,lbl)=>`<th class="r" style="${PNL_SORT.col===col?"color:#4d8fff":""}" onclick="PNL_SORT={col:'${col}',dir:PNL_SORT.col==='${col}'?-PNL_SORT.dir:-1};try{localStorage.setItem('pnl_sort',JSON.stringify(PNL_SORT));}catch(e){}renderPnl()">${lbl}${PNL_SORT.col===col?(PNL_SORT.dir>0?" ↑":" ↓"):""}</th>`;
   document.getElementById("pnlTable").innerHTML=`<table class="pnl-tbl">
-    <thead><tr><th>${PNL_VIEW==="sport"?"Sport":"Sport / Format"}</th>${th("count","Entries")}${th("fees","Fees")}${th("wins","Returned")}${th("net","Net P&L")}${th("roi","ROI")}${showCash?th("cashRate","ITM%"):""}</tr></thead>
+    <thead><tr><th>${PNL_VIEW==="sport"?"Sport":"Sport / Format"}</th>${th("count","Entries")}${th("fees","Fees")}<th class="r" title="Average entry fee per contest">Avg Fee</th>${th("wins","Returned")}${th("net","Net P&L")}${th("roi","ROI")}${showCash?th("cashRate","ITM%"):""}</tr></thead>
     <tbody>
-    ${rows.map(r=>{const cc=r.cashRate!=null?(r.cashRate>=30?"v-pos":r.cashRate>=20?"":"v-neg"):"v-mut";return`<tr><td><div class="s-cell">${sl(r.sport)}${r.format?fc(r.format):""}</div></td><td style="text-align:right" class="v-mut">${r.count.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${r.fees.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${r.wins.toFixed(0)}</td><td style="text-align:right"><span class="${r.net>=0?"v-pos":"v-neg"}">${r.net>=0?"+$":"-$"}${Math.abs(r.net).toFixed(0)}</span></td><td style="text-align:right"><span class="${r.roi>=0?"v-pos":"v-neg"}">${r.roi>=0?"+":""}${r.roi.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="${cc}">${r.cashRate!=null?r.cashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>`;}).join("")}
-    <tr class="total-row"><td><strong>TOTAL</strong></td><td style="text-align:right" class="v-mut">${tC.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${tF.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${tW.toFixed(0)}</td><td style="text-align:right"><span class="${tN>=0?"v-pos":"v-neg"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</span></td><td style="text-align:right"><span class="${tR>=0?"v-pos":"v-neg"}">${tR>=0?"+":""}${tR.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="v-mut">${tCashRate!=null?tCashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>
+    ${rows.map(r=>{const cc=r.cashRate!=null?(r.cashRate>=30?"v-pos":r.cashRate>=20?"":"v-neg"):"v-mut";const avgFee=r.count>0?r2(r.fees/r.count):0;return`<tr><td><div class="s-cell">${sl(r.sport)}${r.format?fc(r.format):""}</div></td><td style="text-align:right" class="v-mut">${r.count.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${r.fees.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${avgFee.toFixed(2)}</td><td style="text-align:right" class="v-mut">$${r.wins.toFixed(0)}</td><td style="text-align:right"><span class="${r.net>=0?"v-pos":"v-neg"}">${r.net>=0?"+$":"-$"}${Math.abs(r.net).toFixed(0)}</span></td><td style="text-align:right"><span class="${r.roi>=0?"v-pos":"v-neg"}">${r.roi>=0?"+":""}${r.roi.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="${cc}">${r.cashRate!=null?r.cashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>`;}).join("")}
+    <tr class="total-row"><td><strong>TOTAL</strong></td><td style="text-align:right" class="v-mut">${tC.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${tF.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${tC>0?r2(tF/tC).toFixed(2):"0"}</td><td style="text-align:right" class="v-mut">$${tW.toFixed(0)}</td><td style="text-align:right"><span class="${tN>=0?"v-pos":"v-neg"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</span></td><td style="text-align:right"><span class="${tR>=0?"v-pos":"v-neg"}">${tR>=0?"+":""}${tR.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="v-mut">${tCashRate!=null?tCashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>
     </tbody></table>`;
   if(_pChart){_pChart.destroy();_pChart=null;}
-  const sn={};keys.forEach(k=>{const[sp]=k.split("|");const d=PD[k][win];sn[sp]=(sn[sp]||0)+(d.wins-d.fees);});
-  const sps=Object.keys(sn).sort((a,b)=>sn[b]-sn[a]);
+  const sn={},sf={};keys.forEach(k=>{const[sp]=k.split("|");const d=PD[k][win];sn[sp]=(sn[sp]||0)+(d.wins-d.fees);sf[sp]=(sf[sp]||0)+d.fees;});
+  const useRoi=PNL_CHART_MODE==="roi";
+  const sps=Object.keys(sn).sort((a,b)=>useRoi?(sf[b]>0?sn[b]/sf[b]:0)-(sf[a]>0?sn[a]/sf[a]:0):sn[b]-sn[a]);
+  const chartVals=sps.map(s=>useRoi?r2(sf[s]>0?sn[s]/sf[s]*100:0):r2(sn[s]));
   const ctx=document.getElementById("pnlChart").getContext("2d");
-  _pChart=new Chart(ctx,{type:"bar",data:{labels:sps,datasets:[{label:"Net P&L",data:sps.map(s=>r2(sn[s])),backgroundColor:sps.map(s=>sn[s]>=0?"rgba(0,212,138,.75)":"rgba(255,69,96,.75)"),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return`Net: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}}});
+  _pChart=new Chart(ctx,{type:"bar",data:{labels:sps,datasets:[{label:useRoi?"ROI %":"Net P&L",data:chartVals,backgroundColor:chartVals.map(v=>v>=0?"rgba(0,212,138,.75)":"rgba(255,69,96,.75)"),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return useRoi?`ROI: ${v>=0?"+":""}${v.toFixed(1)}%`:`Net: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>useRoi?(v>=0?"+":"")+v.toFixed(1)+"%":(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}}});
   renderMonthlyPnl();
 }
 
 function renderMonthlyPnl(){
   if(_mPnlChart){_mPnlChart.destroy();_mPnlChart=null;}
-  const allM={};
+  const allM={},allMCnt={};
   Object.keys(MD).forEach(k=>{
     const[sp]=k.split("|");if(!SP.has("ALL")&&!SP.has(sp))return;
-    (MD[k]||[]).forEach(m=>{if(m.net==null)return;if(!allM[m.month])allM[m.month]=0;allM[m.month]=r2(allM[m.month]+m.net);});
+    (MD[k]||[]).forEach(m=>{if(m.net==null)return;if(!allM[m.month]){allM[m.month]=0;allMCnt[m.month]=0;}allM[m.month]=r2(allM[m.month]+m.net);allMCnt[m.month]=(allMCnt[m.month]||0)+(m.count||0);});
   });
   const months=Object.keys(allM).sort();
   const ctx=document.getElementById("mPnlChart").getContext("2d");
   if(!months.length){ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.save();ctx.fillStyle="#3d4480";ctx.font="11px IBM Plex Mono";ctx.textAlign="center";ctx.fillText("Upload CSV to see monthly P&L",ctx.canvas.width/2,Math.max(ctx.canvas.height/2,30));ctx.restore();return;}
   const vals=months.map(m=>allM[m]);
-  _mPnlChart=new Chart(ctx,{type:"bar",data:{labels:months.map((m,i)=>{const skip=Math.ceil(months.length/14);return i%skip===0?m:"";}),datasets:[{label:"Monthly Net",data:vals,backgroundColor:vals.map(v=>v>=0?"rgba(0,212,138,.75)":"rgba(255,69,96,.75)"),borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return`${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:7,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}}});
+  _mPnlChart=new Chart(ctx,{type:"bar",data:{labels:months.map((m,i)=>{const skip=Math.ceil(months.length/14);return i%skip===0?m:"";}),datasets:[{label:"Monthly Net",data:vals,backgroundColor:vals.map(v=>v>=0?"rgba(0,212,138,.75)":"rgba(255,69,96,.75)"),borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(items){return items[0]?.label||"";},label(i){const v=i.parsed.y;const cnt=allMCnt[months[i.dataIndex]]||0;return[`Net: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`,`Entries: ${cnt.toLocaleString()}`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:7,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}}});
 }
 
 function renderCumPnl(){
@@ -843,10 +885,14 @@ function renderCumPnl(){
   const months=Object.keys(allM).sort();
   const ctx=document.getElementById("cumChart").getContext("2d");
   if(!months.length){ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.save();ctx.fillStyle="#3d4480";ctx.font="11px IBM Plex Mono";ctx.textAlign="center";ctx.fillText("Upload CSV to see cumulative P&L",ctx.canvas.width/2,Math.max(ctx.canvas.height/2,30));ctx.restore();return;}
-  let cum=0;const cumVals=months.map(m=>{cum=r2(cum+allM[m]);return cum;});
+  let cum=0;const cumAbs=months.map(m=>{cum=r2(cum+allM[m]);return cum;});
+  const usePct=CUM_MODE==="pct"&&BANKROLL>0;
+  const cumVals=usePct?cumAbs.map(v=>r2(v/BANKROLL*100)):cumAbs;
   const final=cumVals[cumVals.length-1];
   const lc=final>=0?"#00d48a":"#ff4560";
-  _cumChart=new Chart(ctx,{type:"line",data:{labels:months,datasets:[{label:"Cumulative P&L",data:cumVals,borderColor:lc,backgroundColor:lc+"18",borderWidth:2.5,pointRadius:3,pointBackgroundColor:cumVals.map(v=>v>=0?"#00d48a":"#ff4560"),pointBorderColor:"#08091a",pointBorderWidth:1.5,tension:.3,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return`Cumulative: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}},plugins:[{id:"zl",afterDraw(chart){const{ctx:c,chartArea:{left,right},scales:{y}}=chart;if(!y)return;const yp=y.getPixelForValue(0);c.save();c.setLineDash([4,4]);c.strokeStyle="rgba(255,255,255,.1)";c.lineWidth=1;c.beginPath();c.moveTo(left,yp);c.lineTo(right,yp);c.stroke();c.restore();}}]});
+  const yFmt=usePct?v=>(v>=0?"+":"")+v.toFixed(1)+"%":v=>(v>=0?"+$":"-$")+Math.abs(v).toFixed(2);
+  const ttFmt=usePct?(v=>`Cumulative: ${v>=0?"+":""}${v.toFixed(2)}% of bankroll`):(v=>`Cumulative: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`);
+  _cumChart=new Chart(ctx,{type:"line",data:{labels:months,datasets:[{label:"Cumulative P&L",data:cumVals,borderColor:lc,backgroundColor:lc+"18",borderWidth:2.5,pointRadius:3,pointBackgroundColor:cumVals.map(v=>v>=0?"#00d48a":"#ff4560"),pointBorderColor:"#08091a",pointBorderWidth:1.5,tension:.3,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){return ttFmt(i.parsed.y);}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:yFmt},grid:{color:"#1c2044"}}}},plugins:[{id:"zl",afterDraw(chart){const{ctx:c,chartArea:{left,right},scales:{y}}=chart;if(!y)return;const yp=y.getPixelForValue(0);c.save();c.setLineDash([4,4]);c.strokeStyle="rgba(255,255,255,.1)";c.lineWidth=1;c.beginPath();c.moveTo(left,yp);c.lineTo(right,yp);c.stroke();c.restore();}}]});
 }
 
 /* ── SCORE ENGINE (mirrors computeAll, runs on sample data at startup) ─ */
@@ -856,8 +902,8 @@ function recomputeScores(){
     const pd=PD[k],mo=MOD[k],ref=pd.T6M||pd.T12M||pd.ALL;
     if(!ref||!ref.count)return;
     const b1=r2(ref.top1-B.top1),b10=r2(ref.top10-B.top10),b20=r2(ref.top20-B.top20);
-    const rel1=b1/B.top1,rel10=b10/B.top10,rel20=b20/B.top20;
-    const comp=rel10*0.50+rel20*0.30+rel1*0.20;
+    const rel1=B.top1>0?b1/B.top1:0,rel10=B.top10>0?b10/B.top10:0,rel20=B.top20>0?b20/B.top20:0;
+    const comp=isFinite(rel10*0.50+rel20*0.30+rel1*0.20)?rel10*0.50+rel20*0.30+rel1*0.20:0;
     const bc=r2(Math.max(0,Math.min(50,comp*20+25)));
     const sl=mo?((mo.slope10||0)*0.50+(mo.slope20||0)*0.30+(mo.slope1||0)*0.20):0;
     const tc=r2(Math.max(0,Math.min(25,sl*4+12.5)));
@@ -874,7 +920,7 @@ function recomputeScores(){
     if(b10<-4&&b20<-4&&declining&&confidence==="HIGH"){rec="SIT OUT";reason="Core finish rates well below benchmark with declining trend";}
     else if(b10<-3&&declining&&confidence==="HIGH"){rec="SIT OUT";reason="Top 10% significantly below benchmark and getting worse";}
     else if(b10<-4&&b20<-4&&declining){rec="REDUCE";reason="Finish rates below benchmark with declining trend — more data needed before sitting out";}
-    else if(compositeOk&&improving){rec="INCREASE";reason=`Beating benchmarks${ref.roi>=0?" with positive ROI":" despite recent loss"} \u2014 momentum rising`;}
+    else if(compositeOk&&improving){rec="INCREASE";reason="Beating benchmarks \u2014 finish rates above target with rising momentum";}
     else if(compositeOk&&!declining){rec="MAINTAIN";reason="Above composite benchmark \u2014 hold current exposure";}
     else if(compositeOk&&declining){rec="REDUCE";reason="Beating benchmarks but momentum declining \u2014 reduce while monitoring";}
     else if(!compositeOk&&improving){rec="MAINTAIN";reason="Below benchmark but trend turning positive \u2014 watch closely";}
@@ -889,22 +935,31 @@ function recomputeScores(){
 }
 
 /* ── RENDER + EVENTS ───────────────────────────────────── */
-function render(){renderDashboard();renderPerformance();renderMonthly();renderQuadrant();renderEdgeChart();renderPnl();renderCumPnl();}
+let ACTIVE_TAB="dashboard";
+function renderTab(id){
+  if(id==="dashboard")renderDashboard();
+  else if(id==="performance"){renderPerformance();}
+  else if(id==="trends"){renderMonthly();renderQuadrant();renderEdgeChart();}
+  else if(id==="pnl"){renderPnl();renderCumPnl();}
+}
+function render(){renderTab(ACTIVE_TAB);}
 // Ensure chips are keyboard-accessible after render
 document.querySelectorAll(".chip").forEach(c=>{if(!c.getAttribute("tabindex")){c.setAttribute("tabindex","0");c.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();c.click();}});}});
 
-document.querySelectorAll(".nav-tab").forEach(t=>{t.addEventListener("click",()=>{const id=t.dataset.tab;document.querySelectorAll(".nav-tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(x=>x.classList.remove("active"));t.classList.add("active");document.getElementById("tab-"+id).classList.add("active");});});
+document.querySelectorAll(".nav-tab").forEach(t=>{t.addEventListener("click",()=>{const id=t.dataset.tab;ACTIVE_TAB=id;document.querySelectorAll(".nav-tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(x=>x.classList.remove("active"));t.classList.add("active");document.getElementById("tab-"+id).classList.add("active");renderTab(id);});});
 
-document.getElementById("perfWin").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PWIN=b.dataset.win;document.querySelectorAll("#perfWin .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPerformance();});
+document.getElementById("perfWin").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PWIN=b.dataset.win;try{localStorage.setItem("dfs_pwin",PWIN);}catch(e){}document.querySelectorAll("#perfWin .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPerformance();});
 
-document.getElementById("perfSport").addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;const s=c.dataset.sport;if(s==="ALL"){SP=new Set(["ALL"]);}else{SP.delete("ALL");SP.has(s)?SP.delete(s):SP.add(s);if(!SP.size)SP.add("ALL");}document.querySelectorAll("#perfSport .chip").forEach(x=>{x.className="chip"+(SP.has(x.dataset.sport)?" on":"");});renderPerformance();});
+document.getElementById("perfSport").addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;const s=c.dataset.sport;if(s==="ALL"){SP=new Set(["ALL"]);}else{SP.delete("ALL");SP.has(s)?SP.delete(s):SP.add(s);if(!SP.size)SP.add("ALL");}document.querySelectorAll("#perfSport .chip").forEach(x=>{x.className="chip"+(SP.has(x.dataset.sport)?" on":"");});try{localStorage.setItem("dfs_sp",JSON.stringify(Array.from(SP)));}catch(e){}renderPerformance();});
 
-document.getElementById("perfFmt").addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;PFM=c.dataset.fmt;document.querySelectorAll("#perfFmt .chip").forEach(x=>{let cl="chip";if(x.dataset.fmt===PFM)cl+=PFM==="Classic"?" on-c":PFM==="Showdown"?" on-s":" on";x.className=cl;});renderPerformance();});
+document.getElementById("perfFmt").addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;PFM=c.dataset.fmt;document.querySelectorAll("#perfFmt .chip").forEach(x=>{let cl="chip";if(x.dataset.fmt===PFM)cl+=PFM==="Classic"?" on-c":PFM==="Showdown"?" on-s":" on";x.className=cl;});try{localStorage.setItem("dfs_pfm",PFM);}catch(e){}renderPerformance();});
 
-document.getElementById("rateToggle").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;AR=b.dataset.rate;document.querySelectorAll("#rateToggle .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderMonthly();});
+document.getElementById("rateToggle").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;AR=b.dataset.rate;try{localStorage.setItem("dfs_ar",AR);}catch(e){}document.querySelectorAll("#rateToggle .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderMonthly();});
 
-document.getElementById("pnlView").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_VIEW=b.dataset.view;document.querySelectorAll("#pnlView .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
-document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_WIN=b.dataset.win;document.querySelectorAll("#pnlWin .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
+document.getElementById("pnlView").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_VIEW=b.dataset.view;try{localStorage.setItem("dfs_pnl_view",PNL_VIEW);}catch(e){}document.querySelectorAll("#pnlView .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
+document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_WIN=b.dataset.win;try{localStorage.setItem("dfs_pnl_win",PNL_WIN);}catch(e){}document.querySelectorAll("#pnlWin .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
+document.getElementById("pnlChartMode").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_CHART_MODE=b.dataset.mode;try{localStorage.setItem("dfs_pnl_chart_mode",PNL_CHART_MODE);}catch(e){}document.querySelectorAll("#pnlChartMode .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
+document.getElementById("cumMode").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;CUM_MODE=b.dataset.mode;if(CUM_MODE==="pct"&&!BANKROLL){alert("Set your bankroll in the header first");return;}try{localStorage.setItem("dfs_cum_mode",CUM_MODE);}catch(e){}document.querySelectorAll("#cumMode .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderCumPnl();});
 
 
 /* ── CSV UPLOAD ENGINE ─────────────────────────────────── */
@@ -934,7 +989,7 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   }
   function feeToTier(f){return f<=0.25?"penny":f<=2?"low":f<=5?"mid":"high";}
   function fieldToSize(n){return n<500?"small":n<=5000?"medium":"large";}
-  function r2(v){return Math.round(v*100)/100;}
+  // r2 is defined globally above this IIFE
 
   function parseCSVText(text){
     const lines=text.trim().split(/\r?\n/);
@@ -1056,9 +1111,9 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
       if(!ref||!ref.count)return;
       const b1=r2(ref.top1-B_.top1),b10=r2(ref.top10-B_.top10),b20=r2(ref.top20-B_.top20);
       // Normalize by benchmark so deltas are comparable across T1/T10/T20
-      const rel1=b1/B_.top1,rel10=b10/B_.top10,rel20=b20/B_.top20;
+      const rel1=B_.top1>0?b1/B_.top1:0,rel10=B_.top10>0?b10/B_.top10:0,rel20=B_.top20>0?b20/B_.top20:0;
       // Top10% weighted most — primary DFS cash-line metric
-      const comp=rel10*0.50+rel20*0.30+rel1*0.20;
+      const comp=isFinite(rel10*0.50+rel20*0.30+rel1*0.20)?rel10*0.50+rel20*0.30+rel1*0.20:0;
       const bc=r2(Math.max(0,Math.min(50,comp*20+25)));
       // Trend: same top10%-first weighting
       const sl=mo?((mo.slope10||0)*0.50+(mo.slope20||0)*0.30+(mo.slope1||0)*0.20):0;
@@ -1080,9 +1135,10 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
       const cnt=ref.count;
       const confidence=cnt>=500?"HIGH":cnt>=100?"MEDIUM":cnt>=20?"LOW":"INSUFFICIENT";
       let rec,reason;
-      if(b10<-4&&b20<-4&&declining){rec="SIT OUT";reason="Core finish rates well below benchmark with declining trend";}
-      else if(b10<-3&&declining){rec="SIT OUT";reason="Top 10% significantly below benchmark and getting worse";}
-      else if(compositeOk&&improving){rec="INCREASE";reason=`Beating benchmarks${ref.roi>=0?" with positive ROI":" despite recent loss"} \u2014 momentum rising`;}
+      if(b10<-4&&b20<-4&&declining&&confidence==="HIGH"){rec="SIT OUT";reason="Core finish rates well below benchmark with declining trend";}
+      else if(b10<-3&&declining&&confidence==="HIGH"){rec="SIT OUT";reason="Top 10% significantly below benchmark and getting worse";}
+      else if(b10<-4&&b20<-4&&declining){rec="REDUCE";reason="Finish rates below benchmark with declining trend — more data needed before sitting out";}
+      else if(compositeOk&&improving){rec="INCREASE";reason="Beating benchmarks \u2014 finish rates above target with rising momentum";}
       else if(compositeOk&&!declining){rec="MAINTAIN";reason="Above composite benchmark \u2014 hold current exposure";}
       else if(compositeOk&&declining){rec="REDUCE";reason="Beating benchmarks but momentum declining \u2014 reduce while monitoring";}
       else if(!compositeOk&&improving){rec="MAINTAIN";reason="Below benchmark but trend turning positive \u2014 watch closely";}
@@ -1212,7 +1268,7 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
           const existingKeys=new Set(USER_ROWS.map(rk));
           const newRows=rows.filter(r=>!existingKeys.has(rk(r)));
           const dupes=rows.length-newRows.length;
-          if(!newRows.length){status.className="csv-status";status.textContent=rows.length.toLocaleString()+" entries already loaded (all duplicates). No changes made.";document.getElementById("csvFile").value="";return;}
+          if(!newRows.length){status.className="csv-status err";status.style.background="rgba(245,163,32,.09)";status.style.borderColor="rgba(245,163,32,.25)";status.style.color="#f5a320";status.textContent="⚠ All "+rows.length.toLocaleString()+" entries already exist — no changes made. Try a different file or check for duplicates.";document.getElementById("csvFile").value="";return;}
           USER_ROWS=USER_ROWS.concat(newRows);USER_FILE_COUNT++;
           saveToStorage();
           const d=computeAll(USER_ROWS);applyData(d);
@@ -1287,6 +1343,20 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   })();
 })();
 
+// Playbook cards keyboard navigation
+document.getElementById("pbGrid").addEventListener("keydown",e=>{if((e.key===" "||e.key==="Enter")&&e.target.classList.contains("pb-card")){e.preventDefault();e.target.classList.toggle("exp");}});
+
+// Sync filter UI to loaded state
+(function(){
+  document.querySelectorAll("#perfWin .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.win===PWIN));
+  document.querySelectorAll("#perfSport .chip").forEach(c=>c.className="chip"+(SP.has(c.dataset.sport)?" on":""));
+  document.querySelectorAll("#perfFmt .chip").forEach(c=>{const f=c.dataset.fmt;let cl="chip";if(f===PFM)cl+=PFM==="Classic"?" on-c":PFM==="Showdown"?" on-s":" on";c.className=cl;});
+  document.querySelectorAll("#rateToggle .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.rate===AR));
+  document.querySelectorAll("#pnlView .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.view===PNL_VIEW));
+  document.querySelectorAll("#pnlWin .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.win===PNL_WIN));
+  document.querySelectorAll("#cumMode .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===CUM_MODE));
+  document.querySelectorAll("#pnlChartMode .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===PNL_CHART_MODE));
+})();
 recomputeScores();render();
 if(typeof updateSampleBanner==="function")updateSampleBanner();
 </script></body>
