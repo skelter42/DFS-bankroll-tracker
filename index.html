@@ -257,7 +257,7 @@ button{font-family:inherit;cursor:pointer;}
 .csv-reset:hover{background:rgba(255,69,96,.14);}
 /* RESPONSIVE */
 @media(max-width:1100px){.kpi-row{grid-template-columns:1fr 1fr;}.sub-tables{grid-template-columns:1fr;}.pnl-kpi{grid-template-columns:repeat(3,1fr);}.g2{grid-template-columns:1fr;}}
-@media(max-width:700px){.app-header,.app-nav,.app-main{padding-left:16px;padding-right:16px;}.kpi-row{grid-template-columns:1fr;}.pb-summary{grid-template-columns:1fr 1fr;}.pnl-kpi{grid-template-columns:1fr;}.bench-pills{display:none;}}
+@media(max-width:700px){.app-header,.app-nav,.app-main{padding-left:16px;padding-right:16px;}.kpi-row{grid-template-columns:1fr;}.pb-summary{grid-template-columns:1fr 1fr;}.pnl-kpi{grid-template-columns:1fr;}.bench-pills,.bp-stake{display:none;}}
 .pb-stake{font-family:"IBM Plex Mono",monospace;font-size:.63rem;color:var(--gr);margin-top:6px;padding:5px 9px;background:rgba(0,212,138,.06);border-radius:4px;}
 .pb-stake strong{font-size:.76rem;}
 .pb-stake-pct{color:var(--t2);font-size:.58rem;}
@@ -274,7 +274,9 @@ button{font-family:inherit;cursor:pointer;}
   .pnl-kpi{grid-template-columns:1fr;}
   .pb-summary{grid-template-columns:repeat(2,1fr);}
   .csv-modal{width:96%;padding:18px;}
-  .bench-pills{display:none;}
+  .bench-pills,.bp-stake{display:none;}
+  .ch300{height:220px;}
+  .ch340{height:260px;}
 }
 </style>
 </head>
@@ -562,6 +564,11 @@ function renderDashboard(){
   const t6Net=t6Items.length?r2(t6Items.reduce((a,x)=>a+x.wins,0)-t6Items.reduce((a,x)=>a+x.fees,0)):null;
   const t6Ent=t6Items.reduce((a,x)=>a+x.count,0);
   const t6ROI=t6Items.length&&t6Items.reduce((a,x)=>a+x.fees,0)>0?r2((t6Items.reduce((a,x)=>a+x.wins,0)-t6Items.reduce((a,x)=>a+x.fees,0))/t6Items.reduce((a,x)=>a+x.fees,0)*100):null;
+  // Winning/losing streak (consecutive profitable months)
+  const allMNet={};Object.keys(MD).forEach(k=>{(MD[k]||[]).forEach(m=>{if(m.net!=null){if(!allMNet[m.month])allMNet[m.month]=0;allMNet[m.month]=r2(allMNet[m.month]+m.net);}});});
+  const sortedMo=Object.keys(allMNet).sort();let streak=0;
+  if(sortedMo.length){const last=allMNet[sortedMo[sortedMo.length-1]]>=0;for(let i=sortedMo.length-1;i>=0;i--){if((allMNet[sortedMo[i]]>=0)===last){streak++;}else break;}}
+  const streakSign=sortedMo.length&&allMNet[sortedMo[sortedMo.length-1]]>=0?1:-1;
   const nCol=totNet>=0?"#00d48a":"#ff4560";
   const rCol=totROI>=0?"#00d48a":"#ff4560";
   const arc=2*Math.PI*28*(1-pScore/100);
@@ -580,6 +587,7 @@ function renderDashboard(){
           <div class="score-lbl">Process Score</div>
           <div class="score-title" style="color:${sCol}">${sLbl}</div>
           <div style="font-family:'IBM Plex Mono',monospace;font-size:.57rem;color:#3d4480;margin-top:3px">${totEnt.toLocaleString()} entries</div>
+          ${streak>0?`<div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:${streakSign>0?"#00d48a":"#ff4560"};margin-top:2px">${streak}mo ${streakSign>0?"winning":"losing"} streak</div>`:""}
           <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:#3d4480;margin-top:2px;line-height:1.35">Benchmark + trend + confidence</div>
         </div>
       </div>
@@ -917,11 +925,7 @@ function renderTab(id){
   else if(id==="trends"){renderMonthly();renderQuadrant();renderEdgeChart();}
   else if(id==="pnl"){renderPnl();renderCumPnl();}
 }
-function render(){
-  renderDashboard();renderPerformance();
-  if(ACTIVE_TAB==="trends"){renderMonthly();renderQuadrant();renderEdgeChart();}
-  if(ACTIVE_TAB==="pnl"){renderPnl();renderCumPnl();}
-}
+function render(){renderTab(ACTIVE_TAB);}
 // Ensure chips are keyboard-accessible after render
 document.querySelectorAll(".chip").forEach(c=>{if(!c.getAttribute("tabindex")){c.setAttribute("tabindex","0");c.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();c.click();}});}});
 
