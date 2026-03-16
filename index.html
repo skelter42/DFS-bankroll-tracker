@@ -370,7 +370,7 @@ button{font-family:inherit;cursor:pointer;}
   </div>
   <div class="g2">
     <div class="chart-panel">
-      <div class="chart-hdr"><div><div class="tbl-title">Action Quadrant</div><div class="tbl-sub">X = vs benchmark (pp) · Y = 6-month momentum · bubble = volume</div></div></div>
+      <div class="chart-hdr"><div><div class="tbl-title">Action Quadrant</div><div class="tbl-sub">X = normalized composite vs benchmark · Y = weighted momentum · bubble = volume</div></div></div>
       <div class="chart-body">
         <div class="ch300"><canvas id="quadrantChart"></canvas></div>
         <div class="ql">
@@ -755,18 +755,20 @@ function renderQuadrant(){
   const keys=Object.keys(ED).filter(k=>{const[sp]=k.split("|");return SP.has("ALL")||SP.has(sp);});
   if(_qChart){_qChart.destroy();_qChart=null;}
   const ctx=document.getElementById("quadrantChart").getContext("2d");
+  const B_={top1:1.2,top10:12,top20:24};
   const pts=keys.map(k=>{
     const ed=ED[k],mo=MOD[k],pd=PD[k];if(!ed||!mo||!pd)return null;
     const ref=pd.T6M||pd.T12M||pd.ALL;if(!ref||!ref.count)return null;
-    const x=ed.b10_delta;
-    const y=r2((mo.slope1||0)*.5+(mo.slope10||0)*.3+(mo.slope20||0)*.2);
+    const b1=ed.b1_delta,b10=ed.b10_delta,b20=ed.b20_delta;
+    const x=r2((b10/B_.top10)*.50+(b20/B_.top20)*.30+(b1/B_.top1)*.20);
+    const y=r2((mo.slope10||0)*.5+(mo.slope20||0)*.3+(mo.slope1||0)*.2);
     const r=Math.max(6,Math.min(26,Math.sqrt(ref.count)*.55));
     const ok=x>=0,imp=y>0.05;
     const col=ok&&imp?"rgba(0,212,138,.7)":ok&&!imp?"rgba(245,163,32,.7)":!ok&&imp?"rgba(77,143,255,.7)":"rgba(255,69,96,.7)";
     const bcol=ok&&imp?"#00d48a":ok&&!imp?"#f5a320":!ok&&imp?"#4d8fff":"#ff4560";
     return{x,y,r,col,bcol,k};
   }).filter(Boolean);
-  _qChart=new Chart(ctx,{type:"bubble",data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.col),borderColor:pts.map(p=>p.bcol),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(i){return pts[i[0].dataIndex]?.k||"";},label(i){const p=pts[i.dataIndex];return[`delta: ${p.x>=0?"+":""}${p.x.toFixed(2)}pp  mom: ${p.y>=0?"+":""}${p.y.toFixed(2)}`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(1)+"pp"},grid:{color:"#1c2044"},title:{display:true,text:"vs Benchmark (pp)",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Momentum",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}}}},plugins:[{id:"q",afterDraw(chart){const{ctx,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;if(!x||!y)return;const cx=x.getPixelForValue(0),cy=y.getPixelForValue(0);ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(255,255,255,.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(right,cy);ctx.stroke();ctx.restore();}}]});
+  _qChart=new Chart(ctx,{type:"bubble",data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.col),borderColor:pts.map(p=>p.bcol),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(i){return pts[i[0].dataIndex]?.k||"";},label(i){const p=pts[i.dataIndex];return[`composite: ${p.x>=0?"+":""}${p.x.toFixed(3)}  mom: ${p.y>=0?"+":""}${p.y.toFixed(2)}`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Normalized Composite",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Momentum",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}}}},plugins:[{id:"q",afterDraw(chart){const{ctx,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;if(!x||!y)return;const cx=x.getPixelForValue(0),cy=y.getPixelForValue(0);ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(255,255,255,.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(right,cy);ctx.stroke();ctx.restore();}}]});
 }
 
 function renderEdgeChart(){
