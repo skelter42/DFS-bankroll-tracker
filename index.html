@@ -308,11 +308,11 @@ button{font-family:inherit;cursor:pointer;}
 </header>
 <div class="csv-overlay" id="csvOverlay">
   <div class="csv-modal">
-    <div class="csv-modal-title">Import CSV <span style="font-size:.7rem;color:#3d4480;font-weight:400">(each upload appends)</span></div>
+    <div class="csv-modal-title">Import CSV <span style="font-size:.7rem;color:#3d4480;font-weight:400">(replaces previous data)</span></div>
     <div class="csv-drop" id="csvDrop">
       <div class="csv-drop-icon">📂</div>
       <div class="csv-drop-main">Click to select or drag &amp; drop your CSV</div>
-      <div class="csv-drop-sub">DraftKings · My Contests → Download CSV · multiple files stack</div>
+      <div class="csv-drop-sub">DraftKings · My Contests → Download CSV · each upload replaces</div>
       <input type="file" accept=".csv,text/csv" id="csvFile" style="display:none">
     </div>
     <div class="csv-info">
@@ -815,7 +815,7 @@ function renderEdgeChart(){
   const keys=Object.keys(ED).filter(k=>{const[sp]=k.split("|");return SP.has("ALL")||SP.has(sp);}).sort((a,b)=>(ED[b]?.score||0)-(ED[a]?.score||0)).slice(0,15);
   if(_eChart){_eChart.destroy();_eChart=null;}
   const ctx=document.getElementById("edgeChart").getContext("2d");
-  _eChart=new Chart(ctx,{type:"bar",data:{labels:keys.map(k=>k.replace("|"," ")),datasets:[{label:"Benchmark",data:keys.map(k=>ED[k]?.bench_component||0),backgroundColor:"rgba(77,143,255,.75)",borderRadius:3},{label:"Trend",data:keys.map(k=>ED[k]?.trend_component||0),backgroundColor:"rgba(0,212,138,.75)",borderRadius:3},{label:"Confidence",data:keys.map(k=>ED[k]?.confidence_component||0),backgroundColor:"rgba(155,109,255,.75)",borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"},boxWidth:10}},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{afterBody(items){if(!items.length)return[];const k=keys[items[0].dataIndex];const ed=ED[k];if(!ed)return[];const tot=ed.score;const lbl=tot>=65?"STRONG EDGE":tot>=40?"DEVELOPING":"BELOW BENCH";return["","Total: "+tot+"/100 2014 "+lbl];}}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{max:100,ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}}}}});
+  _eChart=new Chart(ctx,{type:"bar",data:{labels:keys.map(k=>k.replace("|"," ")),datasets:[{label:"Benchmark",data:keys.map(k=>ED[k]?.bench_component||0),backgroundColor:"rgba(77,143,255,.75)",borderRadius:3},{label:"Trend",data:keys.map(k=>ED[k]?.trend_component||0),backgroundColor:"rgba(0,212,138,.75)",borderRadius:3},{label:"Confidence",data:keys.map(k=>ED[k]?.confidence_component||0),backgroundColor:"rgba(155,109,255,.75)",borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"},boxWidth:10}},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{afterBody(items){if(!items.length)return[];const k=keys[items[0].dataIndex];const ed=ED[k];if(!ed)return[];const tot=ed.score;const lbl=tot>=65?"STRONG EDGE":tot>=40?"DEVELOPING":"BELOW BENCH";return["","Total: "+tot+"/100 — "+lbl];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{max:100,ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}}}}});
 }
 
 /* ── P&L ───────────────────────────────────────────────── */
@@ -1264,19 +1264,13 @@ document.getElementById("cumMode").addEventListener("click",e=>{const b=e.target
           const rows=parseCSVText(e.target.result);
           if(rows.error){status.className="csv-status err";status.textContent="Error: "+rows.error;return;}
           if(!rows.length){status.className="csv-status err";status.textContent="No valid entries found. Check column names and sport values.";return;}
-          const rk=r=>`${r.dateMs}|${r.sport}|${r.format}|${r.place}|${Math.round(r.fee*100)}|${Math.round(r.winnings*100)}`;
-          const existingKeys=new Set(USER_ROWS.map(rk));
-          const newRows=rows.filter(r=>!existingKeys.has(rk(r)));
-          const dupes=rows.length-newRows.length;
-          if(!newRows.length){status.className="csv-status err";status.style.background="rgba(245,163,32,.09)";status.style.borderColor="rgba(245,163,32,.25)";status.style.color="#f5a320";status.textContent="⚠ All "+rows.length.toLocaleString()+" entries already exist — no changes made. Try a different file or check for duplicates.";document.getElementById("csvFile").value="";return;}
-          USER_ROWS=USER_ROWS.concat(newRows);USER_FILE_COUNT++;
+          USER_ROWS=rows;USER_FILE_COUNT=1;
           saveToStorage();
           const d=computeAll(USER_ROWS);applyData(d);
           const hasField=rows.some(r=>r.totalTeams>0);
           const keys=new Set(USER_ROWS.map(r=>r.sport+"|"+r.format)).size;
-          const plural=USER_FILE_COUNT>1?" ("+USER_FILE_COUNT+" files)":"";
           status.className="csv-status ok";
-          const dupeNote=dupes?` · ${dupes} dupes skipped`:"";status.textContent="✓ "+newRows.length.toLocaleString()+" added"+dupeNote+" · "+USER_ROWS.length.toLocaleString()+" total · "+keys+" combos"+plural+(hasField?"":" · Tip: add # Teams for finish rates");
+          status.textContent="✓ Loaded "+rows.length.toLocaleString()+" entries · "+keys+" combos"+(hasField?"":" · Tip: add # Teams for finish rates");
           showUploadButtons(true);
           document.getElementById("csvFile").value="";
           setTimeout(()=>document.getElementById("csvOverlay").classList.remove("open"),1800);
