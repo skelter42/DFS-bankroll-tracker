@@ -40,6 +40,10 @@ button{font-family:inherit;cursor:pointer;}
 .nav-tab{padding:13px 20px;font-size:.88rem;font-weight:500;color:var(--t2);border-bottom:2px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap;user-select:none;}
 .nav-tab:hover{color:var(--tx);}
 .nav-tab.active{color:var(--bl);border-bottom-color:var(--bl);font-weight:600;}
+.sport-bar{display:flex;align-items:center;gap:8px;background:var(--card);border-bottom:1px solid var(--bd);padding:8px 32px;overflow-x:auto;flex-wrap:nowrap;}
+.sport-bar .filter-lbl{flex-shrink:0;}
+.sport-bar .chips{flex-wrap:nowrap;}
+@media(max-width:700px){.sport-bar{padding:8px 16px;}}
 /* MAIN */
 .app-main{padding:24px 32px;max-width:1440px;margin:0 auto;}
 .tab-panel{display:none;flex-direction:column;gap:20px;}
@@ -336,6 +340,20 @@ button{font-family:inherit;cursor:pointer;}
   <div class="nav-tab" data-tab="trends">Trends</div>
   <div class="nav-tab" data-tab="pnl">P&amp;L</div>
 </nav>
+<div class="sport-bar">
+  <span class="filter-lbl">Sport</span>
+  <div class="chips" id="perfSport">
+    <div class="chip on" data-sport="ALL">ALL</div>
+    <div class="chip" data-sport="NBA">NBA</div><div class="chip" data-sport="NFL">NFL</div>
+    <div class="chip" data-sport="MLB">MLB</div><div class="chip" data-sport="NHL">NHL</div>
+    <div class="chip" data-sport="MMA">MMA</div><div class="chip" data-sport="GOLF">GOLF</div>
+    <div class="chip" data-sport="TEN">TENNIS</div><div class="chip" data-sport="NAS">NASCAR</div>
+    <div class="chip" data-sport="LOL">LoL</div><div class="chip" data-sport="CS">CS:GO</div>
+    <div class="chip" data-sport="COD">COD</div><div class="chip" data-sport="F1">F1</div>
+    <div class="chip" data-sport="SOC">SOCCER</div><div class="chip" data-sport="UFL">UFL</div>
+    <div class="chip" data-sport="CFB">CFB</div><div class="chip" data-sport="CBB">CBB</div>
+  </div>
+</div>
 <main class="app-main">
 <div class="tab-panel active" id="tab-dashboard">
   <div class="sample-banner" id="sampleBanner">
@@ -370,20 +388,6 @@ button{font-family:inherit;cursor:pointer;}
         <button class="win-btn" data-win="T6M">6 Months</button>
         <button class="win-btn active" data-win="T12M">12 Months</button>
         <button class="win-btn" data-win="ALL">All Time</button>
-      </div>
-    </div>
-    <div class="filter-row">
-      <span class="filter-lbl">Sport</span>
-      <div class="chips" id="perfSport">
-        <div class="chip on" data-sport="ALL">ALL</div>
-        <div class="chip" data-sport="NBA">NBA</div><div class="chip" data-sport="NFL">NFL</div>
-        <div class="chip" data-sport="MLB">MLB</div><div class="chip" data-sport="NHL">NHL</div>
-        <div class="chip" data-sport="MMA">MMA</div><div class="chip" data-sport="GOLF">GOLF</div>
-        <div class="chip" data-sport="TEN">TENNIS</div><div class="chip" data-sport="NAS">NASCAR</div>
-        <div class="chip" data-sport="LOL">LoL</div><div class="chip" data-sport="CS">CS:GO</div>
-        <div class="chip" data-sport="COD">COD</div><div class="chip" data-sport="F1">F1</div>
-        <div class="chip" data-sport="SOC">SOCCER</div><div class="chip" data-sport="UFL">UFL</div>
-        <div class="chip" data-sport="CFB">CFB</div><div class="chip" data-sport="CBB">CBB</div>
       </div>
     </div>
     <div class="filter-row">
@@ -950,7 +954,7 @@ document.querySelectorAll(".nav-tab").forEach(t=>{t.addEventListener("click",()=
 
 document.getElementById("perfWin").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PWIN=b.dataset.win;try{localStorage.setItem("dfs_pwin",PWIN);}catch(e){}document.querySelectorAll("#perfWin .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPerformance();});
 
-document.getElementById("perfSport").addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;const s=c.dataset.sport;if(s==="ALL"){SP=new Set(["ALL"]);}else{SP.delete("ALL");SP.has(s)?SP.delete(s):SP.add(s);if(!SP.size)SP.add("ALL");}document.querySelectorAll("#perfSport .chip").forEach(x=>{x.className="chip"+(SP.has(x.dataset.sport)?" on":"");});try{localStorage.setItem("dfs_sp",JSON.stringify(Array.from(SP)));}catch(e){}renderPerformance();});
+document.getElementById("perfSport").addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;const s=c.dataset.sport;if(s==="ALL"){SP=new Set(["ALL"]);}else{SP.delete("ALL");SP.has(s)?SP.delete(s):SP.add(s);if(!SP.size)SP.add("ALL");}document.querySelectorAll("#perfSport .chip").forEach(x=>{x.className="chip"+(SP.has(x.dataset.sport)?" on":"");});try{localStorage.setItem("dfs_sp",JSON.stringify(Array.from(SP)));}catch(e){}render();});
 
 document.getElementById("perfFmt").addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;PFM=c.dataset.fmt;document.querySelectorAll("#perfFmt .chip").forEach(x=>{let cl="chip";if(x.dataset.fmt===PFM)cl+=PFM==="Classic"?" on-c":PFM==="Showdown"?" on-s":" on";x.className=cl;});try{localStorage.setItem("dfs_pfm",PFM);}catch(e){}renderPerformance();});
 
