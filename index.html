@@ -253,6 +253,24 @@ button{font-family:inherit;cursor:pointer;}
 /* RESPONSIVE */
 @media(max-width:1100px){.kpi-row{grid-template-columns:1fr 1fr;}.sub-tables{grid-template-columns:1fr;}.pnl-kpi{grid-template-columns:repeat(3,1fr);}.g2{grid-template-columns:1fr;}}
 @media(max-width:700px){.app-header,.app-nav,.app-main{padding-left:16px;padding-right:16px;}.kpi-row{grid-template-columns:1fr;}.pb-summary{grid-template-columns:1fr 1fr;}.pnl-kpi{grid-template-columns:1fr;}.bench-pills{display:none;}}
+.pb-stake{font-family:"IBM Plex Mono",monospace;font-size:.63rem;color:var(--gr);margin-top:6px;padding:5px 9px;background:rgba(0,212,138,.06);border-radius:4px;}
+.pb-stake strong{font-size:.76rem;}
+.pb-stake-pct{color:var(--t2);font-size:.58rem;}
+@media(max-width:480px){
+  .app-header{padding:10px 14px;}
+  .app-main{padding:12px 14px;}
+  .app-nav{padding:0 14px;}
+  .pb-grid{grid-template-columns:1fr;}
+  .panel-body,.chart-body{padding:12px 14px;}
+  .perf-tbl th{font-size:.62rem;padding:6px 8px;}
+  .perf-tbl td{padding:7px 8px;}
+  .pnl-tbl th,.pnl-tbl td{padding:6px 8px;font-size:.65rem;}
+  .kpi-row{grid-template-columns:1fr 1fr;}
+  .pnl-kpi{grid-template-columns:1fr;}
+  .pb-summary{grid-template-columns:repeat(2,1fr);}
+  .csv-modal{width:96%;padding:18px;}
+  .bench-pills{display:none;}
+}
 </style>
 </head>
 <body>
@@ -266,6 +284,11 @@ button{font-family:inherit;cursor:pointer;}
       <div class="bp bp-t1"><div class="bpdot" style="background:var(--re)"></div>Top 1% → <input class="bench-inp" id="bInp1" type="number" min="0.1" max="10" step="0.1">%</div>
       <div class="bp bp-t10"><div class="bpdot" style="background:var(--am)"></div>Top 10% → <input class="bench-inp" id="bInp10" type="number" min="1" max="40" step="0.5">%</div>
       <div class="bp bp-t20"><div class="bpdot" style="background:var(--pu)"></div>Top 20% → <input class="bench-inp" id="bInp20" type="number" min="2" max="60" step="1">%</div>
+    </div>
+    <div class="bp" style="gap:6px;border-color:rgba(0,212,138,.3);background:rgba(0,212,138,.06)">
+      <div class="bpdot" style="background:var(--gr)"></div>
+      <span style="color:var(--t2)">Bankroll</span>
+      <span style="color:var(--t2)">$</span><input class="bench-inp" id="bankrollInp" type="number" min="10" max="1000000" step="50" style="width:56px;color:var(--gr)">
     </div>
     <button class="btn-upload" id="csvOpenBtn">↑ Import CSV</button>
   </div>
@@ -465,6 +488,7 @@ let SP=new Set(["ALL"]),AR="top1";
 
 let PFM="ALL";
 let PWIN="T12M";
+let BANKROLL=0;
 
 let PNL_VIEW="detail";
 let PNL_WIN="ALL";
@@ -610,6 +634,7 @@ function renderDashboard(){
           <div class="pb-rec ${m.rc}">${p.rec}</div>
         </div>
         <div class="pb-reason">${p.reason}</div>
+        ${(()=>{if(!BANKROLL)return"";const pct={INCREASE:8,MAINTAIN:4,REDUCE:1.5,"SIT OUT":0}[p.rec]||0;const amt=r2(BANKROLL*pct/100);return pct>0?`<div class="pb-stake">Rec. stake <strong>$${amt.toFixed(0)}</strong> <span class="pb-stake-pct">${pct}% of bankroll</span></div>`:`<div class="pb-stake" style="color:#ff4560">$0 — sit this out</div>`;})()}
       </div>
       <div class="pb-details">
         <div class="fp-pills" style="margin-bottom:8px">
@@ -706,13 +731,15 @@ function renderMonthly(){
   const rc=rk==="top1"?"#ff4560":rk==="top10"?"#f5a320":"#9b6dff";
   if(_mChart){_mChart.destroy();_mChart=null;}
   const ctx=document.getElementById("monthlyChart").getContext("2d");
-  _mChart=new Chart(ctx,{type:"line",data:{labels:months,datasets:[{label:rk==="top1"?"Top 1%":rk==="top10"?"Top 10%":"Top 20%",data:vals,borderColor:rc,backgroundColor:rc+"22",borderWidth:2,pointRadius:vals.map(v=>v!==null?4:0),pointBackgroundColor:vals.map((v,i)=>v!==null?(v>=bn?"#00d48a":"#ff4560"):rc),pointBorderColor:"#08091a",pointBorderWidth:2,tension:.35,fill:true,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{afterBody(i){const p=ser[i[0].dataIndex];if(!p)return[];const d=p[rk]-bn;return["",`bench ${bn}%  →  ${p[rk]>=bn?"✓ ABOVE":"✗ BELOW"}  (${d>=0?"+":""}${d.toFixed(2)}pp)`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{min:0,ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(1)+"%"},grid:{color:"#1c2044"}}}},plugins:[{id:"bl",afterDraw(chart){const{ctx,chartArea:{left,right},scales:{y}}=chart;if(!y)return;const yp=y.getPixelForValue(bn);ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle=rc;ctx.lineWidth=1.5;ctx.globalAlpha=.5;ctx.beginPath();ctx.moveTo(left,yp);ctx.lineTo(right,yp);ctx.stroke();ctx.font="9px IBM Plex Mono";ctx.fillStyle=rc;ctx.globalAlpha=.75;ctx.fillText("bench "+bn+"%",right-82,yp-4);ctx.restore();}}]});
+  if(!months.length){ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.save();ctx.fillStyle="#3d4480";ctx.font="11px IBM Plex Mono";ctx.textAlign="center";ctx.fillText("No monthly data for current filter — try selecting All Sports",ctx.canvas.width/2,Math.max(ctx.canvas.height/2,30));ctx.restore();return;}
+  _mChart=new Chart(ctx,{type:"line",data:{labels:months.map((m,i)=>{const skip=Math.ceil(months.length/14);return i%skip===0?m:"";}),datasets:[{label:rk==="top1"?"Top 1%":rk==="top10"?"Top 10%":"Top 20%",data:vals,borderColor:rc,backgroundColor:rc+"22",borderWidth:2,pointRadius:vals.map(v=>v!==null?4:0),pointBackgroundColor:vals.map((v,i)=>v!==null?(v>=bn?"#00d48a":"#ff4560"):rc),pointBorderColor:"#08091a",pointBorderWidth:2,tension:.35,fill:true,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{afterBody(i){const p=ser[i[0].dataIndex];if(!p)return[];const d=p[rk]-bn;return["",`bench ${bn}%  →  ${p[rk]>=bn?"✓ ABOVE":"✗ BELOW"}  (${d>=0?"+":""}${d.toFixed(2)}pp)`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{min:0,ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(1)+"%"},grid:{color:"#1c2044"}}}},plugins:[{id:"bl",afterDraw(chart){const{ctx,chartArea:{left,right},scales:{y}}=chart;if(!y)return;const yp=y.getPixelForValue(bn);ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle=rc;ctx.lineWidth=1.5;ctx.globalAlpha=.5;ctx.beginPath();ctx.moveTo(left,yp);ctx.lineTo(right,yp);ctx.stroke();ctx.font="9px IBM Plex Mono";ctx.fillStyle=rc;ctx.globalAlpha=.75;ctx.fillText("bench "+bn+"%",right-82,yp-4);ctx.restore();}}]});
 }
 
 function renderQuadrant(){
   const keys=Object.keys(ED).filter(k=>{const[sp]=k.split("|");return SP.has("ALL")||SP.has(sp);});
   if(_qChart){_qChart.destroy();_qChart=null;}
   const ctx=document.getElementById("quadrantChart").getContext("2d");
+  if(!keys.length){ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.save();ctx.fillStyle="#3d4480";ctx.font="11px IBM Plex Mono";ctx.textAlign="center";ctx.fillText("No data for current filter",ctx.canvas.width/2,Math.max(ctx.canvas.height/2,30));ctx.restore();return;}
   const B_=BENCH;
   const pts=keys.map(k=>{
     const ed=ED[k],mo=MOD[k],pd=PD[k];if(!ed||!mo||!pd)return null;
@@ -740,6 +767,7 @@ function renderEdgeChart(){
 function renderPnl(){
   const win=PNL_WIN;
   const keys=Object.keys(PD).filter(k=>{const[sp,fm]=k.split("|");return(SP.has("ALL")||SP.has(sp))&&(PFM==="ALL"||fm===PFM)&&PD[k][win];});
+  if(!keys.length){document.getElementById("pnlKpi").innerHTML=`<div class="no-data" style="grid-column:1/-1">No data for current filters — try a wider time window or fewer sport filters.</div>`;document.getElementById("pnlTable").innerHTML="";return;}
   const tF=r2(keys.reduce((a,k)=>a+(PD[k][win].fees||0),0));
   const tW=r2(keys.reduce((a,k)=>a+(PD[k][win].wins||0),0));
   const tN=r2(tW-tF);
@@ -880,9 +908,10 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   function normSport(s){if(!s)return null;return SPORT_MAP[s.trim().toLowerCase()]||null;}
   function detectFormat(name){
     if(!name)return"Classic";
-    const l=name.toLowerCase();
-    if(l.includes("showdown")||l.includes("captain mode"))return"Showdown";
-    if(l.includes("best ball")||l.includes("bestball"))return"Best Ball";
+    const l=name.toLowerCase().trim();
+    if(l.includes("showdown")||l.includes("captain mode")||l==="sd")return"Showdown";
+    if(l.includes("best ball")||l.includes("bestball")||l==="bb")return"Best Ball";
+    if(l.includes("classic")||l.includes("gpp")||l.includes("tournament")||l.includes("tnt"))return"Classic";
     return"Classic";
   }
   function feeToTier(f){return f<=0.25?"penny":f<=2?"low":f<=5?"mid":"high";}
@@ -911,7 +940,8 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
     const iTeams=col("# teams","teams","# entries","entries","total teams","total entries","field");
     const iName=col("contest name","contest","name");
     if(iSport<0||iDate<0||iPlace<0||iWin<0){
-      return{error:"Missing required columns. Need: Sport, Date, Place, Winnings."};
+      const miss=[];if(iSport<0)miss.push("Sport");if(iDate<0)miss.push("Date");if(iPlace<0)miss.push("Place/Finish");if(iWin<0)miss.push("Winnings/Prize");
+      return{error:"Missing columns: "+miss.join(", ")+". Found: "+headers.slice(0,8).join(", ")+(headers.length>8?"…":"")};
     }
     const rows=[];
     for(let i=1;i<lines.length;i++){
@@ -1139,14 +1169,18 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
           const rows=parseCSVText(e.target.result);
           if(rows.error){status.className="csv-status err";status.textContent="Error: "+rows.error;return;}
           if(!rows.length){status.className="csv-status err";status.textContent="No valid entries found. Check column names and sport values.";return;}
-          USER_ROWS=USER_ROWS.concat(rows);USER_FILE_COUNT++;
+          const existingKeys=new Set(USER_ROWS.map(r=>`${r.dateMs}|${r.sport}|${r.format}|${r.place}|${r.fee}|${r.winnings}`));
+          const newRows=rows.filter(r=>!existingKeys.has(`${r.dateMs}|${r.sport}|${r.format}|${r.place}|${r.fee}|${r.winnings}`));
+          const dupes=rows.length-newRows.length;
+          if(!newRows.length){status.className="csv-status";status.textContent=rows.length.toLocaleString()+" entries already loaded (all duplicates). No changes made.";document.getElementById("csvFile").value="";return;}
+          USER_ROWS=USER_ROWS.concat(newRows);USER_FILE_COUNT++;
           saveToStorage();
           const d=computeAll(USER_ROWS);applyData(d);
           const hasField=rows.some(r=>r.totalTeams>0);
           const keys=new Set(USER_ROWS.map(r=>r.sport+"|"+r.format)).size;
           const plural=USER_FILE_COUNT>1?" ("+USER_FILE_COUNT+" files)":"";
           status.className="csv-status ok";
-          status.textContent="✓ "+rows.length.toLocaleString()+" added · "+USER_ROWS.length.toLocaleString()+" total · "+keys+" combos"+plural+(hasField?"":" · Tip: add # Teams for finish rates");
+          const dupeNote=dupes?` · ${dupes} dupes skipped`:"";status.textContent="✓ "+newRows.length.toLocaleString()+" added"+dupeNote+" · "+USER_ROWS.length.toLocaleString()+" total · "+keys+" combos"+plural+(hasField?"":" · Tip: add # Teams for finish rates");
           showUploadButtons(true);
           document.getElementById("csvFile").value="";
           setTimeout(()=>document.getElementById("csvOverlay").classList.remove("open"),1800);
@@ -1179,6 +1213,10 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   function applyBench(key,inp,min,max){
     const v=parseFloat(inp.value);
     if(isNaN(v)||v<min||v>max){inp.value=BENCH[key];return;}
+    // Enforce T1 ≤ T10 ≤ T20
+    if(key==="top1"&&v>BENCH.top10){inp.value=BENCH[key];return;}
+    if(key==="top10"&&(v<BENCH.top1||v>BENCH.top20)){inp.value=BENCH[key];return;}
+    if(key==="top20"&&v<BENCH.top10){inp.value=BENCH[key];return;}
     BENCH[key]=v;
     try{localStorage.setItem("dfs_bench",JSON.stringify(BENCH));}catch(e){}
     recomputeScores();render();
@@ -1188,6 +1226,11 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   i20.addEventListener("change",()=>applyBench("top20",i20,2,60));
   [i1,i10,i20].forEach(inp=>inp.addEventListener("keydown",e=>{if(e.key==="Enter")inp.blur();}));
   syncInputs();
+  // Bankroll input
+  const bkInp=document.getElementById("bankrollInp");
+  (function(){const saved=localStorage.getItem("dfs_bankroll");if(saved){BANKROLL=parseFloat(saved)||0;bkInp.value=BANKROLL||"";}})();
+  bkInp.addEventListener("change",()=>{BANKROLL=Math.max(0,parseFloat(bkInp.value)||0);bkInp.value=BANKROLL||"";try{localStorage.setItem("dfs_bankroll",BANKROLL);}catch(e){}renderDashboard();});
+  bkInp.addEventListener("keydown",e=>{if(e.key==="Enter")bkInp.blur();});
 })();
 
 recomputeScores();render();
