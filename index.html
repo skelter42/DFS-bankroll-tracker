@@ -355,6 +355,7 @@ button{font-family:inherit;cursor:pointer;}
       <div class="section-title">Weekly Playbook</div>
       <div class="section-sub">Action recommendations per sport/format · based on 6-month finish rates vs benchmarks + trend momentum</div>
     </div>
+    <div id="pbInsight" style="font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--t2);margin-bottom:10px;line-height:1.5"></div>
     <div class="pb-summary" id="pbSummary"></div>
     <div id="pbFilterNote" style="display:none;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--t2);margin-top:6px"><span></span><button onclick="PB_FILTER=null;renderDashboard()" style="background:none;border:1px solid var(--bd);color:var(--t3);font-family:'IBM Plex Mono',monospace;font-size:.58rem;padding:2px 8px;border-radius:4px;cursor:pointer">✕ clear</button></div>
     <div class="pb-grid" id="pbGrid"></div>
@@ -624,9 +625,18 @@ function renderDashboard(){
       <div class="fr-delta" style="color:${d>=0?"#00d48a":"#ff4560"}">${d>=0?"+":""}${d.toFixed(1)}pp</div>
     </div>`;
   }).join("");
-  // Playbook summary counts
+  // Playbook summary counts + insight
   const counts={INCREASE:0,MAINTAIN:0,REDUCE:0,"SIT OUT":0};
   Object.keys(PB).forEach(k=>{if(PB[k]&&PB[k].rec)counts[PB[k].rec]=(counts[PB[k].rec]||0)+1;});
+  (()=>{const ins=document.getElementById("pbInsight");if(!ins)return;
+    const pbKeys=Object.keys(PB).filter(k=>PB[k]);
+    const topInc=pbKeys.filter(k=>PB[k].rec==="INCREASE").sort((a,b)=>(ED[b]?.score||0)-(ED[a]?.score||0))[0];
+    const topOut=pbKeys.filter(k=>PB[k].rec==="SIT OUT").sort((a,b)=>(ED[a]?.score||0)-(ED[b]?.score||0))[0];
+    const parts=[];
+    if(topInc){const[s,f]=topInc.split("|");parts.push(`<span style="color:#00d48a">↑ Best edge: ${s} ${f} (score ${ED[topInc]?.score||0}/100)</span>`);}
+    if(topOut){const[s,f]=topOut.split("|");parts.push(`<span style="color:#ff4560">✕ Sit out: ${s} ${f} (score ${ED[topOut]?.score||0}/100)</span>`);}
+    ins.innerHTML=parts.join(" &nbsp;·&nbsp; ");
+  })();
   document.getElementById("pbSummary").innerHTML=`
     <div class="pbs pbs-inc${PB_FILTER==="INCREASE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='INCREASE'?null:'INCREASE';try{localStorage.setItem('dfs_pb_filter',PB_FILTER||'')}catch(e){}renderDashboard()"><div class="pbs-num">${counts.INCREASE||0}</div><div class="pbs-lbl">↑ Increase</div></div>
     <div class="pbs pbs-mnt${PB_FILTER==="MAINTAIN"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='MAINTAIN'?null:'MAINTAIN';try{localStorage.setItem('dfs_pb_filter',PB_FILTER||'')}catch(e){}renderDashboard()"><div class="pbs-num">${counts.MAINTAIN||0}</div><div class="pbs-lbl">→ Maintain</div></div>
@@ -798,7 +808,7 @@ function renderQuadrant(){
     return{x,y,r,col,bcol,k};
   }).filter(Boolean);
   _qChart=new Chart(ctx,{type:"bubble",data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.col),borderColor:pts.map(p=>p.bcol),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(i){return pts[i[0].dataIndex]?.k||"";},label(i){const p=pts[i.dataIndex];const pb=PB[p.k];const rec=pb?pb.rec:"";return["composite: "+(p.x>=0?"+":"")+p.x.toFixed(3)+"  mom: "+(p.y>=0?"+":"")+p.y.toFixed(2),rec?"Rec: "+rec+" (score "+(ED[p.k]?.score||0)+"/100)":""];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Normalized Composite",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Momentum",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}}}},plugins:[{id:"q",afterDraw(chart){const{ctx,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;if(!x||!y)return;const cx=x.getPixelForValue(0),cy=y.getPixelForValue(0);ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(255,255,255,.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(right,cy);ctx.stroke();ctx.setLineDash([]);ctx.font="bold 8px IBM Plex Mono";ctx.globalAlpha=.3;ctx.textAlign="right";ctx.fillStyle="#00d48a";ctx.fillText("SCALE UP",right-6,top+12);ctx.textAlign="left";ctx.fillStyle="#4d8fff";ctx.fillText("TURNAROUND",left+6,top+12);ctx.fillStyle="#f5a320";ctx.textAlign="right";ctx.fillText("MONITOR",right-6,bottom-5);ctx.fillStyle="#ff4560";ctx.textAlign="left";ctx.fillText("EXIT",left+6,bottom-5);
-ctx.font="bold 7px IBM Plex Mono";ctx.globalAlpha=.85;ctx.fillStyle="#dce0ff";pts.forEach(p=>{const bx=chart.scales.x.getPixelForValue(p.x),by=chart.scales.y.getPixelForValue(p.y);const lbl=p.k.split("|")[0];ctx.textAlign="center";ctx.fillText(lbl,bx,by+p.r+9);});ctx.restore();}}]});
+ctx.font="bold 7px IBM Plex Mono";ctx.globalAlpha=.85;ctx.fillStyle="#dce0ff";pts.forEach(p=>{const bx=chart.scales.x.getPixelForValue(p.x),by=chart.scales.y.getPixelForValue(p.y);const[ks,kf]=p.k.split("|");const fAbr=kf==="Classic"?"C":kf==="Showdown"?"SD":kf==="Best Ball"?"BB":"";const lbl=ks+(fAbr?" "+fAbr:"");ctx.textAlign="center";ctx.fillText(lbl,bx,by+p.r+9);});ctx.restore();}}]});
 }
 
 function renderEdgeChart(){
