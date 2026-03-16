@@ -43,6 +43,11 @@ button{font-family:inherit;cursor:pointer;}
 .app-main{padding:24px 32px;max-width:1440px;margin:0 auto;}
 .tab-panel{display:none;flex-direction:column;gap:20px;}
 .tab-panel.active{display:flex;}
+/* SAMPLE BANNER */
+.sample-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(77,143,255,.07);border:1px solid rgba(77,143,255,.25);border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:.75rem;color:var(--t2);}
+.sample-banner strong{color:var(--bl);}
+.sample-banner-btn{background:rgba(77,143,255,.12);border:1px solid rgba(77,143,255,.35);color:var(--bl);font-family:"IBM Plex Mono",monospace;font-size:.63rem;padding:5px 12px;border-radius:5px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.sample-banner-btn:hover{background:rgba(77,143,255,.22);}
 /* KPI ROW */
 .kpi-row{display:grid;grid-template-columns:220px 1fr 1fr 1fr;gap:14px;}
 .kpi-card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;}
@@ -296,6 +301,10 @@ button{font-family:inherit;cursor:pointer;}
 </nav>
 <main class="app-main">
 <div class="tab-panel active" id="tab-dashboard">
+  <div class="sample-banner" id="sampleBanner">
+    <span>📊 Viewing <strong>sample data</strong> — these are not your results.</span>
+    <button onclick="document.getElementById('csvOverlay').classList.add('open')" class="sample-banner-btn">Upload your CSV →</button>
+  </div>
   <div class="kpi-row" id="kpiRow"></div>
   <div class="panel">
     <div class="panel-hdr">
@@ -450,69 +459,9 @@ const BC={top1:"#f03e5c",top10:"#f0a030",top20:"#9b6dff"};
 const WINS=["T1M","T6M","T12M","ALL"];
 const SL={NAS:"NASCAR",TEN:"TENNIS",LOL:"LOL",CS:"CS:GO",COD:"COD",F1:"F1",SOC:"SOCCER",UFL:"UFL",GOLF:"GOLF",CBB:"CBB",CFB:"CFB"};
 
-let SP=new Set(["ALL"]),FM="ALL",AR="top1";
-const CH={};
-
-function sl(s){return SL[s]||s;}
-function r2(v){return Math.round(v*100)/100;}
-function fc(f){return f==="Classic"?"fc":f==="Showdown"?"fs":"fb";}
-
-function allKeys(){
-  return Object.keys(PD).filter(k=>{
-    const[s,f]=k.split("|");
-    return(SP.has("ALL")||SP.has(s))&&(FM==="ALL"||f===FM);
-  });
-}
-
-function wagg(keys,w){
-  let n=0,t1=0,t10=0,t20=0,fees=0,wins=0;
-  keys.forEach(k=>{
-    const d=PD[k][w];
-    if(!d||d.count===0)return;
-    n+=d.count;t1+=d.top1/100*d.count;t10+=d.top10/100*d.count;t20+=d.top20/100*d.count;
-    fees+=d.fees;wins+=d.wins;
-  });
-  if(!n)return null;
-  return{count:n,fees:r2(fees),wins:r2(wins),net:r2(wins-fees),
-    top1:r2(t1/n*100),top10:r2(t10/n*100),top20:r2(t20/n*100)};
-}
-
-function vc(v,b){
-  if(v===null||v===undefined)return"var(--mu)";
-  if(v>=b)return"var(--gr)";
-  if(v>=b-1)return"var(--am)";
-  return"var(--re)";
-}
-function sig(v,b){
-  if(v===null||v===undefined)return'<span class="sig sn">–</span>';
-  if(v>=b)return'<span class="sig sg">✓</span>';
-  if(v>=b-1)return'<span class="sig sa">~</span>';
-  return'<span class="sig sr">✗</span>';
-}
-function arw(a,r){
-  if(a===null||a===undefined||r===null||r===undefined)return'<span class="na">—</span>';
-  const d=a-r;
-  if(d>0.3)return`<span class="up">▲ +${d.toFixed(2)}pp</span>`;
-  if(d<-0.3)return`<span class="dn">▼ ${d.toFixed(2)}pp</span>`;
-  return`<span class="fl">● ${d>=0?"+":""}${d.toFixed(2)}pp</span>`;
-}
-function dc(ch){if(CH[ch]){CH[ch].destroy();delete CH[ch];}}
-
-function actionOf(k){
-  const e=ED[k],mo=MOD[k];
-  if(!e||!mo)return{l:"—",cls:"ac-exit"};
-  const ok=e.b1_delta>=-0.3&&e.b10_delta>=-2;
-  const slope=((mo.slope1||0)*0.5+(mo.slope10||0)*0.3);
-  const imp=slope>0.05;
-  if(ok&&imp)return{l:"Scale Up",cls:"ac-scale"};
-  if(ok&&!imp)return{l:"Monitor",cls:"ac-watch"};
-  if(!ok&&imp)return{l:"Turnaround",cls:"ac-turn"};
-  return{l:"Exit/Reduce",cls:"ac-exit"};
-}
+let SP=new Set(["ALL"]),AR="top1";
 
 /* ── OVERVIEW ──────────────────────────────────────────── */
-
-
 
 let PFM="ALL";
 let PWIN="T12M";
@@ -1136,6 +1085,11 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
 
   function saveToStorage(){try{localStorage.setItem(LS_ROWS,JSON.stringify(USER_ROWS));localStorage.setItem(LS_COUNT,USER_FILE_COUNT);}catch(e){}}
 
+  function updateSampleBanner(){
+    const b=document.getElementById("sampleBanner");
+    if(b)b.style.display=USER_ROWS.length?"none":"flex";
+  }
+
   function loadFromStorage(){
     try{
       const saved=localStorage.getItem(LS_ROWS);
@@ -1149,6 +1103,7 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
       status.className="csv-status ok";
       status.textContent="✓ Restored "+USER_ROWS.length.toLocaleString()+" entries ("+keys+" combos) from last session.";
       showUploadButtons(true);
+      updateSampleBanner();
     }catch(e){}
   }
 
@@ -1162,12 +1117,14 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   }
 
   function clearUserData(){
+    if(!confirm("Clear all your uploaded data and return to sample data?"))return;
     USER_ROWS=[];USER_FILE_COUNT=0;
     try{localStorage.removeItem(LS_ROWS);localStorage.removeItem(LS_COUNT);}catch(e){}
     const status=document.getElementById("csvStatus");
     status.className="csv-status";status.textContent="";
     showUploadButtons(false);
     resetData();
+    updateSampleBanner();
   }
 
   function processFile(file){
@@ -1192,6 +1149,8 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
           status.textContent="✓ "+rows.length.toLocaleString()+" added · "+USER_ROWS.length.toLocaleString()+" total · "+keys+" combos"+plural+(hasField?"":" · Tip: add # Teams for finish rates");
           showUploadButtons(true);
           document.getElementById("csvFile").value="";
+          setTimeout(()=>document.getElementById("csvOverlay").classList.remove("open"),1800);
+          updateSampleBanner();
         }catch(err){status.className="csv-status err";status.textContent="Error: "+err.message;}
       },10);
     };
@@ -1232,5 +1191,6 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
 })();
 
 recomputeScores();render();
+if(typeof updateSampleBanner==="function")updateSampleBanner();
 </script></body>
 </html>
