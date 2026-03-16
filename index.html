@@ -470,7 +470,7 @@ button{font-family:inherit;cursor:pointer;}
   </div>
   <div class="g2">
     <div class="chart-panel">
-      <div class="chart-hdr"><div><div class="tbl-title">Net P&amp;L by Sport</div><div class="tbl-sub">Green = profitable · Red = losing</div></div></div>
+      <div class="chart-hdr"><div><div class="tbl-title">P&amp;L by Sport</div><div class="tbl-sub">Green = profitable · Red = losing</div></div><div class="win-toggle" id="pnlChartMode"><button class="win-btn active" data-mode="net">$</button><button class="win-btn" data-mode="roi">ROI%</button></div></div>
       <div class="chart-body"><div class="ch300"><canvas id="pnlChart"></canvas></div></div>
     </div>
     <div class="chart-panel">
@@ -510,6 +510,7 @@ let PNL_VIEW=(()=>{try{return localStorage.getItem("dfs_pnl_view")||"detail";}ca
 let PNL_WIN=(()=>{try{return localStorage.getItem("dfs_pnl_win")||"ALL";}catch(e){return"ALL";}})();
 let PNL_SORT=(()=>{try{const s=JSON.parse(localStorage.getItem("pnl_sort")||"null");return(s&&s.col&&s.dir)?s:{col:"net",dir:-1};}catch(e){return{col:"net",dir:-1};}})();
 let CUM_MODE=(()=>{try{return localStorage.getItem("dfs_cum_mode")||"abs";}catch(e){return"abs";}})();
+let PNL_CHART_MODE=(()=>{try{return localStorage.getItem("dfs_pnl_chart_mode")||"net";}catch(e){return"net";}})();
 let _mChart=null,_qChart=null,_eChart=null,_pChart=null,_mPnlChart=null,_cumChart=null;
 
 function vc(v,b){return v>=b?"#00d48a":v>=b*.8?"#f5a320":"#ff4560";}
@@ -789,7 +790,7 @@ function renderEdgeChart(){
   const keys=Object.keys(ED).filter(k=>{const[sp]=k.split("|");return SP.has("ALL")||SP.has(sp);}).sort((a,b)=>(ED[b]?.score||0)-(ED[a]?.score||0)).slice(0,15);
   if(_eChart){_eChart.destroy();_eChart=null;}
   const ctx=document.getElementById("edgeChart").getContext("2d");
-  _eChart=new Chart(ctx,{type:"bar",data:{labels:keys.map(k=>k.replace("|"," ")),datasets:[{label:"Benchmark",data:keys.map(k=>ED[k]?.bench_component||0),backgroundColor:"rgba(77,143,255,.75)",borderRadius:3},{label:"Trend",data:keys.map(k=>ED[k]?.trend_component||0),backgroundColor:"rgba(0,212,138,.75)",borderRadius:3},{label:"Confidence",data:keys.map(k=>ED[k]?.confidence_component||0),backgroundColor:"rgba(155,109,255,.75)",borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"},boxWidth:10}},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{max:100,ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}}}}});
+  _eChart=new Chart(ctx,{type:"bar",data:{labels:keys.map(k=>k.replace("|"," ")),datasets:[{label:"Benchmark",data:keys.map(k=>ED[k]?.bench_component||0),backgroundColor:"rgba(77,143,255,.75)",borderRadius:3},{label:"Trend",data:keys.map(k=>ED[k]?.trend_component||0),backgroundColor:"rgba(0,212,138,.75)",borderRadius:3},{label:"Confidence",data:keys.map(k=>ED[k]?.confidence_component||0),backgroundColor:"rgba(155,109,255,.75)",borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"},boxWidth:10}},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{afterBody(items){if(!items.length)return[];const k=keys[items[0].dataIndex];const ed=ED[k];if(!ed)return[];const tot=ed.score;const lbl=tot>=65?"STRONG EDGE":tot>=40?"DEVELOPING":"BELOW BENCH";return["","Total: "+tot+"/100 2014 "+lbl];}}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{max:100,ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}}}}});
 }
 
 /* ── P&L ───────────────────────────────────────────────── */
@@ -829,10 +830,12 @@ function renderPnl(){
     <tr class="total-row"><td><strong>TOTAL</strong></td><td style="text-align:right" class="v-mut">${tC.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${tF.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${tW.toFixed(0)}</td><td style="text-align:right"><span class="${tN>=0?"v-pos":"v-neg"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</span></td><td style="text-align:right"><span class="${tR>=0?"v-pos":"v-neg"}">${tR>=0?"+":""}${tR.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="v-mut">${tCashRate!=null?tCashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>
     </tbody></table>`;
   if(_pChart){_pChart.destroy();_pChart=null;}
-  const sn={};keys.forEach(k=>{const[sp]=k.split("|");const d=PD[k][win];sn[sp]=(sn[sp]||0)+(d.wins-d.fees);});
-  const sps=Object.keys(sn).sort((a,b)=>sn[b]-sn[a]);
+  const sn={},sf={};keys.forEach(k=>{const[sp]=k.split("|");const d=PD[k][win];sn[sp]=(sn[sp]||0)+(d.wins-d.fees);sf[sp]=(sf[sp]||0)+d.fees;});
+  const useRoi=PNL_CHART_MODE==="roi";
+  const sps=Object.keys(sn).sort((a,b)=>useRoi?(sf[b]>0?sn[b]/sf[b]:0)-(sf[a]>0?sn[a]/sf[a]:0):sn[b]-sn[a]);
+  const chartVals=sps.map(s=>useRoi?r2(sf[s]>0?sn[s]/sf[s]*100:0):r2(sn[s]));
   const ctx=document.getElementById("pnlChart").getContext("2d");
-  _pChart=new Chart(ctx,{type:"bar",data:{labels:sps,datasets:[{label:"Net P&L",data:sps.map(s=>r2(sn[s])),backgroundColor:sps.map(s=>sn[s]>=0?"rgba(0,212,138,.75)":"rgba(255,69,96,.75)"),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return`Net: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}}});
+  _pChart=new Chart(ctx,{type:"bar",data:{labels:sps,datasets:[{label:useRoi?"ROI %":"Net P&L",data:chartVals,backgroundColor:chartVals.map(v=>v>=0?"rgba(0,212,138,.75)":"rgba(255,69,96,.75)"),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return useRoi?`ROI: ${v>=0?"+":""}${v.toFixed(1)}%`:`Net: ${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:9,family:"IBM Plex Mono"}},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>useRoi?(v>=0?"+":"")+v.toFixed(1)+"%":(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}}});
   renderMonthlyPnl();
 }
 
@@ -934,6 +937,7 @@ document.getElementById("rateToggle").addEventListener("click",e=>{const b=e.tar
 
 document.getElementById("pnlView").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_VIEW=b.dataset.view;try{localStorage.setItem("dfs_pnl_view",PNL_VIEW);}catch(e){}document.querySelectorAll("#pnlView .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
 document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_WIN=b.dataset.win;try{localStorage.setItem("dfs_pnl_win",PNL_WIN);}catch(e){}document.querySelectorAll("#pnlWin .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
+document.getElementById("pnlChartMode").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;PNL_CHART_MODE=b.dataset.mode;try{localStorage.setItem("dfs_pnl_chart_mode",PNL_CHART_MODE);}catch(e){}document.querySelectorAll("#pnlChartMode .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderPnl();});
 document.getElementById("cumMode").addEventListener("click",e=>{const b=e.target.closest(".win-btn");if(!b)return;CUM_MODE=b.dataset.mode;if(CUM_MODE==="pct"&&!BANKROLL){alert("Set your bankroll in the header first");return;}try{localStorage.setItem("dfs_cum_mode",CUM_MODE);}catch(e){}document.querySelectorAll("#cumMode .win-btn").forEach(x=>x.classList.toggle("active",x===b));renderCumPnl();});
 
 
@@ -1330,6 +1334,7 @@ document.getElementById("pbGrid").addEventListener("keydown",e=>{if((e.key===" "
   document.querySelectorAll("#pnlView .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.view===PNL_VIEW));
   document.querySelectorAll("#pnlWin .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.win===PNL_WIN));
   document.querySelectorAll("#cumMode .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===CUM_MODE));
+  document.querySelectorAll("#pnlChartMode .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===PNL_CHART_MODE));
 })();
 recomputeScores();render();
 if(typeof updateSampleBanner==="function")updateSampleBanner();
