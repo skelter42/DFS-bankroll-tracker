@@ -29,7 +29,7 @@ button{font-family:inherit;cursor:pointer;}
 .bp-t10{background:rgba(245,163,32,.08);border-color:rgba(245,163,32,.3);color:var(--am);}
 .bp-t20{background:rgba(155,109,255,.08);border-color:rgba(155,109,255,.3);color:var(--pu);}
 .bpdot{width:5px;height:5px;border-radius:50%;}
-.bench-inp{width:32px;background:transparent;border:none;border-bottom:1px dashed currentColor;color:inherit;font-family:"IBM Plex Mono",monospace;font-size:.63rem;text-align:center;outline:none;padding:0 1px;-moz-appearance:textfield;}
+.bench-inp{width:44px;background:transparent;border:none;border-bottom:1px dashed currentColor;color:inherit;font-family:"IBM Plex Mono",monospace;font-size:.63rem;text-align:center;outline:none;padding:0 1px;-moz-appearance:textfield;}
 .bench-inp::-webkit-inner-spin-button,.bench-inp::-webkit-outer-spin-button{-webkit-appearance:none;}
 .bench-inp:focus{border-bottom-style:solid;}
 .btn-upload{display:flex;align-items:center;gap:6px;padding:7px 15px;border-radius:6px;border:1px solid rgba(77,143,255,.4);background:rgba(77,143,255,.09);color:var(--bl);font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:600;transition:all .15s;}
@@ -139,7 +139,7 @@ button{font-family:inherit;cursor:pointer;}
 .fp-ok{background:rgba(0,212,138,.1);color:var(--gr);border:1px solid rgba(0,212,138,.2);}
 .fp-warn{background:rgba(245,163,32,.1);color:var(--am);border:1px solid rgba(245,163,32,.2);}
 .fp-bad{background:rgba(255,69,96,.1);color:var(--re);border:1px solid rgba(255,69,96,.2);}
-.pb-stats{display:flex;flex-direction:column;gap:5px;padding:4px 0 2px;}
+.pb-stats{display:flex;flex-direction:column;gap:9px;padding:4px 0 2px;}
 .pb-stat{display:flex;align-items:center;justify-content:space-between;}
 .pb-stat-lbl{font-family:"IBM Plex Mono",monospace;font-size:.58rem;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;}
 .pb-stat-val{font-family:"IBM Plex Mono",monospace;font-size:.66rem;font-weight:600;}
@@ -492,7 +492,7 @@ let BANKROLL=0;
 
 let PNL_VIEW="detail";
 let PNL_WIN="ALL";
-let PNL_SORT={col:"net",dir:-1};
+let PNL_SORT=(()=>{try{const s=JSON.parse(localStorage.getItem("pnl_sort")||"null");return(s&&s.col&&s.dir)?s:{col:"net",dir:-1};}catch(e){return{col:"net",dir:-1};}})();
 let _mChart=null,_qChart=null,_eChart=null,_pChart=null,_mPnlChart=null,_cumChart=null;
 
 function vc(v,b){return v>=b?"#00d48a":v>=b*.8?"#f5a320":"#ff4560";}
@@ -556,7 +556,8 @@ function renderDashboard(){
         <div class="score-meta">
           <div class="score-lbl">Process Score</div>
           <div class="score-title" style="color:${sCol}">${sLbl}</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:#3d4480;margin-top:4px">${totEnt.toLocaleString()} entries</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:.57rem;color:#3d4480;margin-top:3px">${totEnt.toLocaleString()} entries</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:#3d4480;margin-top:2px;line-height:1.35">Benchmark + trend + confidence</div>
         </div>
       </div>
     </div>
@@ -566,12 +567,12 @@ function renderDashboard(){
       <div class="kpi-sub">$${totFees.toFixed(0)} fees · $${totWins.toFixed(0)} returned</div>
     </div>
     <div class="kpi-card ${totROI>=0?"kpi-pos":"kpi-neg"}">
-      <div class="kpi-label">Overall ROI</div>
+      <div class="kpi-label" title="(Winnings − Fees) ÷ Fees × 100 — does not account for time">Overall ROI</div>
       <div class="kpi-value" style="color:${rCol}">${totROI>=0?"+":""}${totROI.toFixed(1)}%</div>
       <div class="kpi-sub">${keys.length} sport/format combos tracked</div>
     </div>
     <div class="kpi-card kpi-neu">
-      <div class="kpi-label">Top 10% Finish Rate</div>
+      <div class="kpi-label" title="% of entries finishing in the top 10% of field — primary DFS cash line metric">Top 10% Finish Rate</div>
       <div class="kpi-value" style="color:${vc(t10,BENCH.top10)}">${t10.toFixed(1)}%</div>
       <div class="kpi-sub">Benchmark ${BENCH.top10}% · ${t10>=BENCH.top10?"✓ beating it":"✗ below it"}</div>
     </div>`;
@@ -645,7 +646,7 @@ function renderDashboard(){
         <div class="pb-stats">
           <div class="pb-stat"><span class="pb-stat-lbl">Momentum</span><span class="pb-stat-val" style="color:${momCol}">${momLbl}</span></div>
           ${ed?`<div class="pb-stat"><span class="pb-stat-lbl">Edge Score</span><span class="pb-stat-val">${ed.score}/100</span></div>`:""}
-          <div class="pb-stat"><span class="pb-stat-lbl">Composite Δ</span><span class="pb-stat-val" style="color:${p.composite_delta>=0?"#00d48a":"#ff4560"}">${p.composite_delta>=0?"+":""}${p.composite_delta.toFixed(2)}</span></div>
+          <div class="pb-stat"><span class="pb-stat-lbl" title="Normalized composite delta vs benchmark">vs Benchmark</span><span class="pb-stat-val" style="color:${p.composite_delta>=0?"#00d48a":"#ff4560"}">${p.composite_delta>=0?"+":""}${p.composite_delta.toFixed(2)}</span></div>
           <div class="pb-stat"><span class="pb-stat-lbl">Confidence</span><span class="pb-stat-val" style="color:#7880b8">${p.confidence} · ${ref.count.toLocaleString()} entries</span></div>
         </div>
       </div>
@@ -753,7 +754,7 @@ function renderQuadrant(){
     const bcol=ok&&imp?"#00d48a":ok&&!imp?"#f5a320":!ok&&imp?"#4d8fff":"#ff4560";
     return{x,y,r,col,bcol,k};
   }).filter(Boolean);
-  _qChart=new Chart(ctx,{type:"bubble",data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.col),borderColor:pts.map(p=>p.bcol),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(i){return pts[i[0].dataIndex]?.k||"";},label(i){const p=pts[i.dataIndex];return[`composite: ${p.x>=0?"+":""}${p.x.toFixed(3)}  mom: ${p.y>=0?"+":""}${p.y.toFixed(2)}`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Normalized Composite",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Momentum",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}}}},plugins:[{id:"q",afterDraw(chart){const{ctx,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;if(!x||!y)return;const cx=x.getPixelForValue(0),cy=y.getPixelForValue(0);ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(255,255,255,.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(right,cy);ctx.stroke();ctx.restore();}}]});
+  _qChart=new Chart(ctx,{type:"bubble",data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.col),borderColor:pts.map(p=>p.bcol),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(i){return pts[i[0].dataIndex]?.k||"";},label(i){const p=pts[i.dataIndex];return[`composite: ${p.x>=0?"+":""}${p.x.toFixed(3)}  mom: ${p.y>=0?"+":""}${p.y.toFixed(2)}`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Normalized Composite",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Momentum",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}}}},plugins:[{id:"q",afterDraw(chart){const{ctx,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;if(!x||!y)return;const cx=x.getPixelForValue(0),cy=y.getPixelForValue(0);ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(255,255,255,.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(right,cy);ctx.stroke();ctx.setLineDash([]);ctx.font="bold 8px IBM Plex Mono";ctx.globalAlpha=.3;ctx.textAlign="right";ctx.fillStyle="#00d48a";ctx.fillText("SCALE UP",right-6,top+12);ctx.textAlign="left";ctx.fillStyle="#4d8fff";ctx.fillText("TURNAROUND",left+6,top+12);ctx.fillStyle="#f5a320";ctx.textAlign="right";ctx.fillText("MONITOR",right-6,bottom-5);ctx.fillStyle="#ff4560";ctx.textAlign="left";ctx.fillText("EXIT",left+6,bottom-5);ctx.restore();}}]});
 }
 
 function renderEdgeChart(){
@@ -792,9 +793,9 @@ function renderPnl(){
   }
   rows.sort((a,b)=>b[PNL_SORT.col]*PNL_SORT.dir-a[PNL_SORT.col]*PNL_SORT.dir);
   const showCash=rows.some(r=>r.cashRate!=null);
-  const th=(col,lbl)=>`<th class="r" style="${PNL_SORT.col===col?"color:#4d8fff":""}" onclick="PNL_SORT={col:'${col}',dir:PNL_SORT.col==='${col}'?-PNL_SORT.dir:-1};renderPnl()">${lbl}${PNL_SORT.col===col?(PNL_SORT.dir>0?" ↑":" ↓"):""}</th>`;
+  const th=(col,lbl)=>`<th class="r" style="${PNL_SORT.col===col?"color:#4d8fff":""}" onclick="PNL_SORT={col:'${col}',dir:PNL_SORT.col==='${col}'?-PNL_SORT.dir:-1};try{localStorage.setItem('pnl_sort',JSON.stringify(PNL_SORT));}catch(e){}renderPnl()">${lbl}${PNL_SORT.col===col?(PNL_SORT.dir>0?" ↑":" ↓"):""}</th>`;
   document.getElementById("pnlTable").innerHTML=`<table class="pnl-tbl">
-    <thead><tr><th>${PNL_VIEW==="sport"?"Sport":"Sport / Format"}</th>${th("count","Entries")}${th("fees","Fees")}${th("wins","Returned")}${th("net","Net P&L")}${th("roi","ROI")}${showCash?th("cashRate","Cash%"):""}</tr></thead>
+    <thead><tr><th>${PNL_VIEW==="sport"?"Sport":"Sport / Format"}</th>${th("count","Entries")}${th("fees","Fees")}${th("wins","Returned")}${th("net","Net P&L")}${th("roi","ROI")}${showCash?th("cashRate","ITM%"):""}</tr></thead>
     <tbody>
     ${rows.map(r=>{const cc=r.cashRate!=null?(r.cashRate>=30?"v-pos":r.cashRate>=20?"":"v-neg"):"v-mut";return`<tr><td><div class="s-cell">${sl(r.sport)}${r.format?fc(r.format):""}</div></td><td style="text-align:right" class="v-mut">${r.count.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${r.fees.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${r.wins.toFixed(0)}</td><td style="text-align:right"><span class="${r.net>=0?"v-pos":"v-neg"}">${r.net>=0?"+$":"-$"}${Math.abs(r.net).toFixed(0)}</span></td><td style="text-align:right"><span class="${r.roi>=0?"v-pos":"v-neg"}">${r.roi>=0?"+":""}${r.roi.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="${cc}">${r.cashRate!=null?r.cashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>`;}).join("")}
     <tr class="total-row"><td><strong>TOTAL</strong></td><td style="text-align:right" class="v-mut">${tC.toLocaleString()}</td><td style="text-align:right" class="v-mut">$${tF.toFixed(0)}</td><td style="text-align:right" class="v-mut">$${tW.toFixed(0)}</td><td style="text-align:right"><span class="${tN>=0?"v-pos":"v-neg"}">${tN>=0?"+$":"-$"}${Math.abs(tN).toFixed(0)}</span></td><td style="text-align:right"><span class="${tR>=0?"v-pos":"v-neg"}">${tR>=0?"+":""}${tR.toFixed(1)}%</span></td>${showCash?`<td style="text-align:right"><span class="v-mut">${tCashRate!=null?tCashRate.toFixed(1)+"%":"—"}</span></td>`:""}</tr>
@@ -818,7 +819,7 @@ function renderMonthlyPnl(){
   const ctx=document.getElementById("mPnlChart").getContext("2d");
   if(!months.length){ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.save();ctx.fillStyle="#3d4480";ctx.font="11px IBM Plex Mono";ctx.textAlign="center";ctx.fillText("Upload CSV to see monthly P&L",ctx.canvas.width/2,Math.max(ctx.canvas.height/2,30));ctx.restore();return;}
   const vals=months.map(m=>allM[m]);
-  _mPnlChart=new Chart(ctx,{type:"bar",data:{labels:months,datasets:[{label:"Monthly Net",data:vals,backgroundColor:vals.map(v=>v>=0?"rgba(0,212,138,.75)":"rgba(255,69,96,.75)"),borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return`${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:7,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}}});
+  _mPnlChart=new Chart(ctx,{type:"bar",data:{labels:months.map((m,i)=>{const skip=Math.ceil(months.length/14);return i%skip===0?m:"";}),datasets:[{label:"Monthly Net",data:vals,backgroundColor:vals.map(v=>v>=0?"rgba(0,212,138,.75)":"rgba(255,69,96,.75)"),borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{label(i){const v=i.parsed.y;return`${v>=0?"+$":"-$"}${Math.abs(v).toFixed(2)}`;}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:7,family:"IBM Plex Mono"},maxRotation:45},grid:{color:"#1c2044"}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>(v>=0?"+$":"-$")+Math.abs(v)},grid:{color:"#1c2044"}}}}});
 }
 
 function renderCumPnl(){
@@ -856,8 +857,9 @@ function recomputeScores(){
     const cnt=ref.count;
     const confidence=cnt>=500?"HIGH":cnt>=100?"MEDIUM":cnt>=20?"LOW":"INSUFFICIENT";
     let rec,reason;
-    if(b10<-4&&b20<-4&&declining){rec="SIT OUT";reason="Core finish rates well below benchmark with declining trend";}
-    else if(b10<-3&&declining){rec="SIT OUT";reason="Top 10% significantly below benchmark and getting worse";}
+    if(b10<-4&&b20<-4&&declining&&confidence==="HIGH"){rec="SIT OUT";reason="Core finish rates well below benchmark with declining trend";}
+    else if(b10<-3&&declining&&confidence==="HIGH"){rec="SIT OUT";reason="Top 10% significantly below benchmark and getting worse";}
+    else if(b10<-4&&b20<-4&&declining){rec="REDUCE";reason="Finish rates below benchmark with declining trend — more data needed before sitting out";}
     else if(compositeOk&&improving){rec="INCREASE";reason=`Beating benchmarks${ref.roi>=0?" with positive ROI":" despite recent loss"} \u2014 momentum rising`;}
     else if(compositeOk&&!declining){rec="MAINTAIN";reason="Above composite benchmark \u2014 hold current exposure";}
     else if(compositeOk&&declining){rec="REDUCE";reason="Beating benchmarks but momentum declining \u2014 reduce while monitoring";}
@@ -874,6 +876,8 @@ function recomputeScores(){
 
 /* ── RENDER + EVENTS ───────────────────────────────────── */
 function render(){renderDashboard();renderPerformance();renderMonthly();renderQuadrant();renderEdgeChart();renderPnl();renderCumPnl();}
+// Ensure chips are keyboard-accessible after render
+document.querySelectorAll(".chip").forEach(c=>{if(!c.getAttribute("tabindex")){c.setAttribute("tabindex","0");c.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();c.click();}});}});
 
 document.querySelectorAll(".nav-tab").forEach(t=>{t.addEventListener("click",()=>{const id=t.dataset.tab;document.querySelectorAll(".nav-tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(x=>x.classList.remove("active"));t.classList.add("active");document.getElementById("tab-"+id).classList.add("active");});});
 
@@ -1169,8 +1173,9 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
           const rows=parseCSVText(e.target.result);
           if(rows.error){status.className="csv-status err";status.textContent="Error: "+rows.error;return;}
           if(!rows.length){status.className="csv-status err";status.textContent="No valid entries found. Check column names and sport values.";return;}
-          const existingKeys=new Set(USER_ROWS.map(r=>`${r.dateMs}|${r.sport}|${r.format}|${r.place}|${r.fee}|${r.winnings}`));
-          const newRows=rows.filter(r=>!existingKeys.has(`${r.dateMs}|${r.sport}|${r.format}|${r.place}|${r.fee}|${r.winnings}`));
+          const rk=r=>`${r.dateMs}|${r.sport}|${r.format}|${r.place}|${Math.round(r.fee*100)}|${Math.round(r.winnings*100)}`;
+          const existingKeys=new Set(USER_ROWS.map(rk));
+          const newRows=rows.filter(r=>!existingKeys.has(rk(r)));
           const dupes=rows.length-newRows.length;
           if(!newRows.length){status.className="csv-status";status.textContent=rows.length.toLocaleString()+" entries already loaded (all duplicates). No changes made.";document.getElementById("csvFile").value="";return;}
           USER_ROWS=USER_ROWS.concat(newRows);USER_FILE_COUNT++;
