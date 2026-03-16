@@ -88,7 +88,8 @@ button{font-family:inherit;cursor:pointer;}
 .section-title{font-size:.95rem;font-weight:600;}
 .section-sub{font-family:"IBM Plex Mono",monospace;font-size:.61rem;color:var(--t2);margin-top:3px;}
 .pb-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
-.pbs{border-radius:8px;padding:12px 14px;border:1px solid;text-align:center;}
+.pbs{border-radius:8px;padding:12px 14px;border:1px solid;text-align:center;cursor:pointer;transition:all .15s;}
+.pbs-on{box-shadow:0 0 0 2px var(--bl)!important;background:rgba(77,143,255,.1)!important;}
 .pbs-inc{background:var(--gr-bg);border-color:rgba(0,212,138,.25);}
 .pbs-mnt{background:var(--bl-bg);border-color:rgba(77,143,255,.25);}
 .pbs-red{background:var(--am-bg);border-color:rgba(245,163,32,.25);}
@@ -106,8 +107,8 @@ button{font-family:inherit;cursor:pointer;}
 .pb-quick{font-family:"IBM Plex Mono",monospace;font-size:.65rem;color:var(--t2);margin-top:5px;}
 .pb-details{display:none;padding:8px 16px 6px;border-top:1px solid var(--bd);}
 .pb-card.exp .pb-details{display:block;}
-.pb-tog-row{padding:4px 0 8px;text-align:center;}
-.pb-tog{font-family:"IBM Plex Mono",monospace;font-size:.56rem;color:var(--t3);}
+.pb-tog-row{padding:5px 0 7px;text-align:center;border-top:1px solid var(--bd);margin-top:2px;}
+.pb-tog{font-family:"IBM Plex Mono",monospace;font-size:.58rem;color:var(--t2);letter-spacing:.3px;}
 .pb-tog-hide{display:none;}
 .pb-card.exp .pb-tog-show{display:none;}
 .pb-card.exp .pb-tog-hide{display:inline;}
@@ -312,6 +313,7 @@ button{font-family:inherit;cursor:pointer;}
       <button class="csv-reset" id="csvExport" style="display:none">↓ Export CSV</button>
       <button class="csv-reset" id="csvClear" style="display:none">✕ Clear All Data</button>
       <button class="csv-reset" id="csvReset" style="display:none">Reset to Sample</button>
+      <button class="csv-reset" id="csvTemplate" style="border-color:rgba(77,143,255,.3);background:rgba(77,143,255,.07);color:var(--bl)">↓ Template CSV</button>
       <button class="csv-close" id="csvClose">Close</button>
     </div>
   </div>
@@ -342,6 +344,7 @@ button{font-family:inherit;cursor:pointer;}
       <div class="section-sub">Action recommendations per sport/format · based on 6-month finish rates vs benchmarks + trend momentum</div>
     </div>
     <div class="pb-summary" id="pbSummary"></div>
+    <div id="pbFilterNote" style="display:none;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--t2);margin-top:6px"><span></span><button onclick="PB_FILTER=null;renderDashboard()" style="background:none;border:1px solid var(--bd);color:var(--t3);font-family:'IBM Plex Mono',monospace;font-size:.58rem;padding:2px 8px;border-radius:4px;cursor:pointer">✕ clear</button></div>
     <div class="pb-grid" id="pbGrid"></div>
   </div>
 </div>
@@ -490,6 +493,7 @@ let PFM="ALL";
 let PWIN="T12M";
 let BANKROLL=0;
 
+let PB_FILTER=null;
 let PNL_VIEW="detail";
 let PNL_WIN="ALL";
 let PNL_SORT=(()=>{try{const s=JSON.parse(localStorage.getItem("pnl_sort")||"null");return(s&&s.col&&s.dir)?s:{col:"net",dir:-1};}catch(e){return{col:"net",dir:-1};}})();
@@ -598,17 +602,18 @@ function renderDashboard(){
   const counts={INCREASE:0,MAINTAIN:0,REDUCE:0,"SIT OUT":0};
   Object.keys(PB).forEach(k=>{if(PB[k]&&PB[k].rec)counts[PB[k].rec]=(counts[PB[k].rec]||0)+1;});
   document.getElementById("pbSummary").innerHTML=`
-    <div class="pbs pbs-inc"><div class="pbs-num">${counts.INCREASE||0}</div><div class="pbs-lbl">↑ Increase</div></div>
-    <div class="pbs pbs-mnt"><div class="pbs-num">${counts.MAINTAIN||0}</div><div class="pbs-lbl">→ Maintain</div></div>
-    <div class="pbs pbs-red"><div class="pbs-num">${counts.REDUCE||0}</div><div class="pbs-lbl">↓ Reduce</div></div>
-    <div class="pbs pbs-out"><div class="pbs-num">${counts["SIT OUT"]||0}</div><div class="pbs-lbl">✕ Sit Out</div></div>`;
+    <div class="pbs pbs-inc${PB_FILTER==="INCREASE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='INCREASE'?null:'INCREASE';renderDashboard()"><div class="pbs-num">${counts.INCREASE||0}</div><div class="pbs-lbl">↑ Increase</div></div>
+    <div class="pbs pbs-mnt${PB_FILTER==="MAINTAIN"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='MAINTAIN'?null:'MAINTAIN';renderDashboard()"><div class="pbs-num">${counts.MAINTAIN||0}</div><div class="pbs-lbl">→ Maintain</div></div>
+    <div class="pbs pbs-red${PB_FILTER==="REDUCE"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='REDUCE'?null:'REDUCE';renderDashboard()"><div class="pbs-num">${counts.REDUCE||0}</div><div class="pbs-lbl">↓ Reduce</div></div>
+    <div class="pbs pbs-out${PB_FILTER==="SIT OUT"?" pbs-on":""}" onclick="PB_FILTER=PB_FILTER==='SIT OUT'?null:'SIT OUT';renderDashboard()"><div class="pbs-num">${counts["SIT OUT"]||0}</div><div class="pbs-lbl">✕ Sit Out</div></div>`;
   // Playbook cards
   const order={INCREASE:0,MAINTAIN:1,REDUCE:2,"SIT OUT":3};
-  const sorted=Object.keys(PB).filter(k=>PB[k]).sort((a,b)=>{
+  const sorted=Object.keys(PB).filter(k=>PB[k]&&(!PB_FILTER||PB[k].rec===PB_FILTER)).sort((a,b)=>{
     const ra=order[PB[a].rec]??4,rb=order[PB[b].rec]??4;
     if(ra!==rb)return ra-rb;
     return(ED[b]?.score||0)-(ED[a]?.score||0);
   });
+  const pbFlt=document.getElementById("pbFilterNote");if(pbFlt){pbFlt.style.display=PB_FILTER?"flex":"none";if(PB_FILTER)pbFlt.querySelector("span").textContent="Showing: "+PB_FILTER+" only";}
   const rm={INCREASE:{cls:"pb-inc",ic:"pi-inc",rc:"pr-inc",icon:"↑"},MAINTAIN:{cls:"pb-mnt",ic:"pi-mnt",rc:"pr-mnt",icon:"→"},REDUCE:{cls:"pb-red",ic:"pi-red",rc:"pr-red",icon:"↓"},"SIT OUT":{cls:"pb-out",ic:"pi-out",rc:"pr-out",icon:"✕"}};
   const cc={HIGH:"ct-high",MEDIUM:"ct-med",LOW:"ct-low",INSUFFICIENT:"ct-ins"};
   document.getElementById("pbGrid").innerHTML=sorted.map(k=>{
@@ -754,7 +759,8 @@ function renderQuadrant(){
     const bcol=ok&&imp?"#00d48a":ok&&!imp?"#f5a320":!ok&&imp?"#4d8fff":"#ff4560";
     return{x,y,r,col,bcol,k};
   }).filter(Boolean);
-  _qChart=new Chart(ctx,{type:"bubble",data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.col),borderColor:pts.map(p=>p.bcol),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(i){return pts[i[0].dataIndex]?.k||"";},label(i){const p=pts[i.dataIndex];return[`composite: ${p.x>=0?"+":""}${p.x.toFixed(3)}  mom: ${p.y>=0?"+":""}${p.y.toFixed(2)}`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Normalized Composite",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Momentum",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}}}},plugins:[{id:"q",afterDraw(chart){const{ctx,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;if(!x||!y)return;const cx=x.getPixelForValue(0),cy=y.getPixelForValue(0);ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(255,255,255,.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(right,cy);ctx.stroke();ctx.setLineDash([]);ctx.font="bold 8px IBM Plex Mono";ctx.globalAlpha=.3;ctx.textAlign="right";ctx.fillStyle="#00d48a";ctx.fillText("SCALE UP",right-6,top+12);ctx.textAlign="left";ctx.fillStyle="#4d8fff";ctx.fillText("TURNAROUND",left+6,top+12);ctx.fillStyle="#f5a320";ctx.textAlign="right";ctx.fillText("MONITOR",right-6,bottom-5);ctx.fillStyle="#ff4560";ctx.textAlign="left";ctx.fillText("EXIT",left+6,bottom-5);ctx.restore();}}]});
+  _qChart=new Chart(ctx,{type:"bubble",data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.col),borderColor:pts.map(p=>p.bcol),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0e1029",borderColor:"#1c2044",borderWidth:1,titleColor:"#dce0ff",bodyColor:"#7880b8",titleFont:{family:"IBM Plex Mono",size:10},bodyFont:{family:"IBM Plex Mono",size:10},callbacks:{title(i){return pts[i[0].dataIndex]?.k||"";},label(i){const p=pts[i.dataIndex];return[`composite: ${p.x>=0?"+":""}${p.x.toFixed(3)}  mom: ${p.y>=0?"+":""}${p.y.toFixed(2)}`];}}}},scales:{x:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Normalized Composite",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}},y:{ticks:{color:"#3d4480",font:{size:8,family:"IBM Plex Mono"},callback:v=>v.toFixed(2)},grid:{color:"#1c2044"},title:{display:true,text:"Momentum",color:"#3d4480",font:{size:8,family:"IBM Plex Mono"}}}}},plugins:[{id:"q",afterDraw(chart){const{ctx,chartArea:{left,right,top,bottom},scales:{x,y}}=chart;if(!x||!y)return;const cx=x.getPixelForValue(0),cy=y.getPixelForValue(0);ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(255,255,255,.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(right,cy);ctx.stroke();ctx.setLineDash([]);ctx.font="bold 8px IBM Plex Mono";ctx.globalAlpha=.3;ctx.textAlign="right";ctx.fillStyle="#00d48a";ctx.fillText("SCALE UP",right-6,top+12);ctx.textAlign="left";ctx.fillStyle="#4d8fff";ctx.fillText("TURNAROUND",left+6,top+12);ctx.fillStyle="#f5a320";ctx.textAlign="right";ctx.fillText("MONITOR",right-6,bottom-5);ctx.fillStyle="#ff4560";ctx.textAlign="left";ctx.fillText("EXIT",left+6,bottom-5);
+ctx.font="bold 7px IBM Plex Mono";ctx.globalAlpha=.85;ctx.fillStyle="#dce0ff";pts.forEach(p=>{const bx=chart.scales.x.getPixelForValue(p.x),by=chart.scales.y.getPixelForValue(p.y);const lbl=p.k.split("|")[0];ctx.textAlign="center";ctx.fillText(lbl,bx,by+p.r+9);});ctx.restore();}}]});
 }
 
 function renderEdgeChart(){
@@ -1208,6 +1214,13 @@ document.getElementById("pnlWin").addEventListener("click",e=>{const b=e.target.
   document.getElementById("csvExport").addEventListener("click",exportCSV);
   document.getElementById("csvClear").addEventListener("click",clearUserData);
   document.getElementById("csvReset").addEventListener("click",()=>{clearUserData();});
+  document.getElementById("csvTemplate").addEventListener("click",()=>{
+    const rows=["Sport,Date,Place,Winnings,Entry Fee,# Teams,Contest Name",
+      "NFL,2024-09-08,3,12.50,1.00,100,NFL Classic GPP","NBA,2024-10-25,1,0,0.25,50,NBA Classic Tournament",
+      "MLB,2024-04-15,12,0,0.10,200,MLB Classic MAIN","NFL,2024-09-15,1,250.00,5.00,1000,NFL Showdown Captain Mode"];
+    const blob=new Blob([rows.join("\n")],{type:"text/csv"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="dfs_template.csv";a.click();URL.revokeObjectURL(a.href);
+  });
   loadFromStorage();
 })();
 
