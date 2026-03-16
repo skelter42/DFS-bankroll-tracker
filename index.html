@@ -236,8 +236,8 @@ button{font-family:inherit;cursor:pointer;}
 .bar-wrap{width:68px;height:7px;background:var(--card2);border-radius:4px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:4px;}
 /* CSV MODAL */
-.csv-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;}
-.csv-overlay.open{display:flex;}
+.csv-overlay{display:none;pointer-events:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;}
+.csv-overlay.open{display:flex;pointer-events:auto;}
 .csv-modal{background:var(--card);border:1px solid var(--b2);border-radius:14px;padding:28px;max-width:520px;width:90%;display:flex;flex-direction:column;gap:16px;}
 .csv-modal-title{font-family:"Syne",sans-serif;font-size:1.1rem;font-weight:800;color:#fff;}
 .csv-drop{border:2px dashed var(--b2);border-radius:10px;padding:34px;text-align:center;cursor:pointer;transition:all .15s;}
@@ -942,7 +942,7 @@ function renderTab(id){
   else if(id==="trends"){renderMonthly();renderQuadrant();renderEdgeChart();}
   else if(id==="pnl"){renderPnl();renderCumPnl();}
 }
-function render(){renderTab(ACTIVE_TAB);}
+function render(){try{renderTab(ACTIVE_TAB);}catch(e){console.error("render error:",e);}}
 // Ensure chips are keyboard-accessible after render
 document.querySelectorAll(".chip").forEach(c=>{if(!c.getAttribute("tabindex")){c.setAttribute("tabindex","0");c.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();c.click();}});}});
 
@@ -1281,7 +1281,7 @@ document.getElementById("cumMode").addEventListener("click",e=>{const b=e.target
           document.getElementById("csvFile").value="";
           setTimeout(()=>document.getElementById("csvOverlay").classList.remove("open"),1800);
           updateSampleBanner();
-        }catch(err){status.className="csv-status err";status.textContent="Error: "+err.message;}
+        }catch(err){status.className="csv-status err";status.textContent="Error: "+err.message;setTimeout(()=>document.getElementById("csvOverlay").classList.remove("open"),3000);}
       },10);
     };
     reader.onerror=function(){status.className="csv-status err";status.textContent="Failed to read file.";};
