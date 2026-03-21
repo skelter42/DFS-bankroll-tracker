@@ -817,89 +817,100 @@ function renderStakeTable(){
 }
 
 /* ── TRENDS ────────────────────────────────────────────── */
+// Helper: aggregate monthly data per sport across all formats
+function sportMonthsAgg(sport){
+  const allM={};
+  Object.keys(MD).filter(k=>k.startsWith(sport+"|")).forEach(k=>{
+    (MD[k]||[]).forEach(m=>{
+      if(!allM[m.month])allM[m.month]={month:m.month,count:0,fees:0,wins:0};
+      allM[m.month].count+=m.count;
+      allM[m.month].fees=r2(allM[m.month].fees+m.fees);
+      allM[m.month].wins=r2(allM[m.month].wins+m.wins);
+    });
+  });
+  return Object.values(allM).sort((a,b)=>a.month.localeCompare(b.month));
+}
+function statsFromMonths(months){
+  if(!months.length)return null;
+  const count=months.reduce((a,m)=>a+m.count,0);
+  const fees=r2(months.reduce((a,m)=>a+m.fees,0));
+  const wins=r2(months.reduce((a,m)=>a+m.wins,0));
+  const net=r2(wins-fees);
+  const roi=fees>0?r2(net/fees*100):0;
+  return{count,fees,wins,net,roi};
+}
+// Build only the status block HTML for a sport (called without full re-render)
+function buildStratStatus(sport){
+  const s=STRATEGIES[sport]||{};
+  const note=s.note||'';
+  const since=s.since||'';
+  if(!note||!since)return '';
+  const months=sportMonthsAgg(sport);
+  const recentM=months.filter(m=>m.month>=since.slice(0,7));
+  const priorM=months.filter(m=>m.month<since.slice(0,7));
+  const recent=statsFromMonths(recentM);
+  const prior=statsFromMonths(priorM);
+  if(!recent||recent.count<5){
+    const n=recent?recent.count:0;
+    return`<div class="strat-status-block strat-st-watch"><div class="strat-verdict strat-verdict-watch">⏳ Need more data <span style="font-weight:400;font-size:.72rem;color:var(--t2)">(${n} entr${n===1?'y':'ies'} since start)</span></div></div>`;
+  }
+  const roi=recent.roi,net=recent.net;
+  const priorRoi=prior&&prior.count>=5?prior.roi:null;
+  const roiDelta=priorRoi!=null?r2(roi-priorRoi):null;
+  const netStr=(net>=0?'+$':'-$')+Math.abs(net).toFixed(2);
+  const roiStr=(roi>=0?'+':'')+roi.toFixed(1)+'%';
+  const deltaStr=roiDelta!=null?` (${roiDelta>=0?'+':''}${roiDelta.toFixed(1)}% vs prior)`:'';
+  const priorStr=priorRoi!=null?`Prior ${prior.count} entries: ${priorRoi>=0?'+':''}${priorRoi.toFixed(1)}% ROI`:'';
+  let cls,vCls,icon,label;
+  if(roi>=-3){cls='strat-st-ok';vCls='strat-verdict-ok';icon='✓';label='Working';}
+  else if(roi>=-10){cls='strat-st-warn';vCls='strat-verdict-warn';icon='⚠';label='Monitor — underperforming';}
+  else{cls='strat-st-bad';vCls='strat-verdict-bad';icon='✗';label='Stop — not working';}
+  return`<div class="strat-status-block ${cls}">
+    <div class="strat-verdict ${vCls}">${icon} ${label}</div>
+    <div class="strat-stats-line"><span>${recent.count} entries</span><span>Net <strong style="color:${net>=0?'var(--gr)':'var(--re)'}">${netStr}</strong></span><span>ROI <strong style="color:${roi>=0?'var(--gr)':'var(--re)'}">${roiStr}${deltaStr}</strong></span></div>
+    ${priorStr?`<div class="strat-baseline">${priorStr}</div>`:''}
+  </div>`;
+}
+// Update a single field without re-rendering inputs (fixes 1-letter-at-a-time bug)
+function stratUpdate(sport,field,value){
+  if(!STRATEGIES[sport])STRATEGIES[sport]={};
+  STRATEGIES[sport][field]=value;
+  try{localStorage.setItem('dfs_strategies',JSON.stringify(STRATEGIES));}catch(e){}
+  const key=sport.replace(/[^a-zA-Z0-9]/g,'_');
+  const statusEl=document.getElementById('ss-'+key);
+  if(statusEl)statusEl.innerHTML=buildStratStatus(sport);
+  if(field==='since'){const b=document.getElementById('sb-'+key);if(b)b.textContent=value?'since '+value:'';}
+}
 function renderStrategy(){
   const sports=[...new Set(Object.keys(PD).map(k=>k.split("|")[0]))].sort();
   const el=document.getElementById("stratCards");
   if(!sports.length){el.innerHTML='<div class="no-data">Upload your CSV to track strategies per sport.</div>';return;}
-
-  // Aggregate monthly data per sport (across all formats)
-  function sportMonths(sport){
-    const allM={};
-    Object.keys(MD).filter(k=>k.startsWith(sport+"|")).forEach(k=>{
-      (MD[k]||[]).forEach(m=>{
-        if(!allM[m.month])allM[m.month]={month:m.month,count:0,fees:0,wins:0,cashed:0};
-        allM[m.month].count+=m.count;allM[m.month].fees=r2(allM[m.month].fees+m.fees);allM[m.month].wins=r2(allM[m.month].wins+m.wins);
-      });
-    });
-    return Object.values(allM).sort((a,b)=>a.month.localeCompare(b.month));
-  }
-
-  function statsFromMonths(months){
-    if(!months.length)return null;
-    const count=months.reduce((a,m)=>a+m.count,0);
-    const fees=r2(months.reduce((a,m)=>a+m.fees,0));
-    const wins=r2(months.reduce((a,m)=>a+m.wins,0));
-    const net=r2(wins-fees);
-    const roi=fees>0?r2(net/fees*100):0;
-    // cash rate from PD (across formats for this sport's months)
-    return{count,fees,wins,net,roi};
-  }
-
+  // Set default note for any sport not yet configured
+  let dirty=false;
+  sports.forEach(sp=>{if(!STRATEGIES[sp]){STRATEGIES[sp]={note:'simming with Portfolio +'};dirty=true;}});
+  if(dirty)try{localStorage.setItem('dfs_strategies',JSON.stringify(STRATEGIES));}catch(e){}
   el.innerHTML=sports.map(sport=>{
     const s=STRATEGIES[sport]||{};
-    const note=s.note||'';
+    const note=s.note!==undefined?s.note:'simming with Portfolio +';
     const since=s.since||'';
-    const months=sportMonths(sport);
-
-    let statusHtml='';
-    if(note&&since){
-      const recentM=months.filter(m=>m.month>=since.slice(0,7));
-      const priorM=months.filter(m=>m.month<since.slice(0,7));
-      const recent=statsFromMonths(recentM);
-      const prior=statsFromMonths(priorM);
-
-      if(!recent||recent.count<5){
-        const n=recent?recent.count:0;
-        statusHtml=`<div class="strat-status-block strat-st-watch"><div class="strat-verdict strat-verdict-watch">⏳ Need more data <span style="font-weight:400;font-size:.72rem;color:var(--t2)">(${n} entr${n===1?'y':'ies'} since start)</span></div></div>`;
-      } else {
-        const roi=recent.roi;
-        const net=recent.net;
-        const priorRoi=prior&&prior.count>=5?prior.roi:null;
-        const roiDelta=priorRoi!=null?r2(roi-priorRoi):null;
-        const netStr=(net>=0?'+$':'-$')+Math.abs(net).toFixed(2);
-        const roiStr=(roi>=0?'+':'')+roi.toFixed(1)+'%';
-        const priorStr=priorRoi!=null?`Prior ${prior.count} entries: ${priorRoi>=0?'+':''}${priorRoi.toFixed(1)}% ROI`:'';
-        const deltaStr=roiDelta!=null?` (${roiDelta>=0?'+':''}${roiDelta.toFixed(1)}% vs prior)`:'';
-        let cls,vCls,icon,label;
-        if(roi>=-3){cls='strat-st-ok';vCls='strat-verdict-ok';icon='✓';label='Working';}
-        else if(roi>=-10){cls='strat-st-warn';vCls='strat-verdict-warn';icon='⚠';label='Monitor — underperforming';}
-        else{cls='strat-st-bad';vCls='strat-verdict-bad';icon='✗';label='Stop — not working';}
-        statusHtml=`<div class="strat-status-block ${cls}">
-          <div class="strat-verdict ${vCls}">${icon} ${label}</div>
-          <div class="strat-stats-line"><span>${recent.count} entries</span><span>Net <strong style="color:${net>=0?'var(--gr)':'var(--re)'}">${netStr}</strong></span><span>ROI <strong style="color:${roi>=0?'var(--gr)':'var(--re)'}">${roiStr}${deltaStr}</strong></span></div>
-          ${priorStr?`<div class="strat-baseline">${priorStr}</div>`:''}
-        </div>`;
-      }
-    }
-
-    const sinceLabel=since?`since ${since}`:'';
-    return `<div class="strat-card">
+    const key=sport.replace(/[^a-zA-Z0-9]/g,'_');
+    return`<div class="strat-card">
       <div class="strat-card-head">
         <span class="strat-sport-lbl">${sport}</span>
-        <span class="strat-since-badge">${sinceLabel}</span>
+        <span class="strat-since-badge" id="sb-${key}">${since?'since '+since:''}</span>
       </div>
       <div class="strat-body">
         <div class="strat-inp-row">
           <div class="strat-field">
             <label class="strat-lbl">Current approach</label>
-            <input class="strat-inp" type="text" placeholder="e.g. even line stack, Portfolio+ sim…" value="${note.replace(/"/g,'&quot;')}" oninput="STRATEGIES['${sport}']=(STRATEGIES['${sport}']||{});STRATEGIES['${sport}'].note=this.value;try{localStorage.setItem('dfs_strategies',JSON.stringify(STRATEGIES));}catch(e){}renderStrategy()">
+            <input class="strat-inp" type="text" placeholder="e.g. even line stack, Portfolio+ sim…" value="${note.replace(/"/g,'&quot;')}" oninput="stratUpdate('${sport}','note',this.value)">
           </div>
           <div class="strat-field">
             <label class="strat-lbl">Started</label>
-            <input class="strat-inp" type="date" value="${since}" onchange="STRATEGIES['${sport}']=(STRATEGIES['${sport}']||{});STRATEGIES['${sport}'].since=this.value;try{localStorage.setItem('dfs_strategies',JSON.stringify(STRATEGIES));}catch(e){}renderStrategy()">
+            <input class="strat-inp" type="date" value="${since}" onchange="stratUpdate('${sport}','since',this.value)">
           </div>
         </div>
-        ${statusHtml}
+        <div id="ss-${key}">${buildStratStatus(sport)}</div>
       </div>
     </div>`;
   }).join('');
