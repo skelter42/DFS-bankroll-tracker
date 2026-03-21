@@ -259,6 +259,34 @@ button{font-family:inherit;cursor:pointer;}
 .csv-close:hover{color:var(--tx);}
 .csv-reset{padding:7px 16px;border-radius:6px;border:1px solid rgba(255,69,96,.3);background:rgba(255,69,96,.07);color:var(--re);font-family:"IBM Plex Mono",monospace;font-size:.7rem;display:none;}
 .csv-reset:hover{background:rgba(255,69,96,.14);}
+/* STRATEGY */
+.strat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+.strat-intro{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 18px;font-family:"IBM Plex Mono",monospace;font-size:.7rem;color:var(--t2);line-height:1.6;}
+.strat-intro strong{color:var(--bl);}
+.strat-card{background:var(--card);border:1px solid var(--bd);border-radius:12px;overflow:hidden;}
+.strat-card-head{padding:14px 16px 10px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;}
+.strat-sport-lbl{font-family:"Syne",sans-serif;font-size:1.05rem;font-weight:800;color:#fff;}
+.strat-since-badge{font-family:"IBM Plex Mono",monospace;font-size:.58rem;color:var(--t3);}
+.strat-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+.strat-field{display:flex;flex-direction:column;gap:4px;}
+.strat-lbl{font-family:"IBM Plex Mono",monospace;font-size:.58rem;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);}
+.strat-inp{background:var(--card2);border:1px solid var(--bd);border-radius:6px;padding:8px 11px;color:var(--tx);font-family:"DM Sans",sans-serif;font-size:.82rem;outline:none;transition:border-color .12s;}
+.strat-inp:focus{border-color:var(--bl);}
+.strat-inp::placeholder{color:var(--t3);}
+.strat-inp-row{display:grid;grid-template-columns:1fr 160px;gap:10px;}
+.strat-status-block{border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:4px;}
+.strat-st-ok{background:rgba(0,212,138,.07);border:1px solid rgba(0,212,138,.2);}
+.strat-st-warn{background:rgba(245,163,32,.07);border:1px solid rgba(245,163,32,.2);}
+.strat-st-bad{background:rgba(255,69,96,.07);border:1px solid rgba(255,69,96,.2);}
+.strat-st-watch{background:rgba(77,143,255,.07);border:1px solid rgba(77,143,255,.2);}
+.strat-verdict{font-weight:600;font-size:.82rem;display:flex;align-items:center;gap:6px;}
+.strat-verdict-ok{color:var(--gr);}
+.strat-verdict-warn{color:var(--am);}
+.strat-verdict-bad{color:var(--re);}
+.strat-verdict-watch{color:var(--bl);}
+.strat-stats-line{font-family:"IBM Plex Mono",monospace;font-size:.62rem;color:var(--t2);display:flex;gap:12px;flex-wrap:wrap;margin-top:2px;}
+.strat-stats-line strong{font-weight:600;}
+.strat-baseline{font-family:"IBM Plex Mono",monospace;font-size:.58rem;color:var(--t3);margin-top:2px;padding-top:6px;border-top:1px solid var(--bd);}
 /* RESPONSIVE */
 @media(max-width:1100px){.kpi-row{grid-template-columns:1fr 1fr;}.sub-tables{grid-template-columns:1fr;}.pnl-kpi{grid-template-columns:repeat(3,1fr);}.g2{grid-template-columns:1fr;}}
 @media(max-width:700px){.app-header,.app-nav,.app-main{padding-left:16px;padding-right:16px;}.kpi-row{grid-template-columns:1fr;}.pb-summary{grid-template-columns:1fr 1fr;}.pnl-kpi{grid-template-columns:1fr;}.bench-pills,.bp-stake{display:none;}}
@@ -337,6 +365,7 @@ button{font-family:inherit;cursor:pointer;}
 <nav class="app-nav">
   <div class="nav-tab active" data-tab="dashboard">Dashboard</div>
   <div class="nav-tab" data-tab="performance">Performance</div>
+  <div class="nav-tab" data-tab="strategy">Strategy</div>
   <div class="nav-tab" data-tab="trends">Trends</div>
   <div class="nav-tab" data-tab="pnl">P&amp;L</div>
 </nav>
@@ -418,6 +447,15 @@ button{font-family:inherit;cursor:pointer;}
         <div class="tbl-scroll"><div id="stakeTable"></div></div>
       </div>
     </div>
+  </div>
+</div>
+<div class="tab-panel" id="tab-strategy">
+  <div class="strat-intro">
+    <strong>Current Strategy Tracker</strong> — Log what you're doing for each sport and when you started. We'll flag when the data says it's not working.<br>
+    <span style="color:var(--t3)">Results are evaluated per sport across all formats using ROI + cash rate vs your historical baseline.</span>
+  </div>
+  <div class="strat-grid" id="stratCards">
+    <div class="no-data">Upload your CSV to track strategies per sport.</div>
   </div>
 </div>
 <div class="tab-panel" id="tab-trends">
@@ -513,6 +551,7 @@ let BANKROLL=0;
 let STAKE_PCT=(()=>{try{const s=JSON.parse(localStorage.getItem("dfs_stake_pct")||"null");return(s&&s.INCREASE!=null)?s:{INCREASE:8,MAINTAIN:4,REDUCE:1.5};}catch(e){return{INCREASE:8,MAINTAIN:4,REDUCE:1.5};}})();
 
 let PB_FILTER=(()=>{try{const v=localStorage.getItem("dfs_pb_filter");return v||null;}catch(e){return null;}})();
+let STRATEGIES=(()=>{try{const s=localStorage.getItem("dfs_strategies");return s?JSON.parse(s):{};}catch(e){return{};}})();
 let PNL_VIEW=(()=>{try{return localStorage.getItem("dfs_pnl_view")||"detail";}catch(e){return"detail";}})();
 let PNL_WIN=(()=>{try{return localStorage.getItem("dfs_pnl_win")||"ALL";}catch(e){return"ALL";}})();
 let PNL_SORT=(()=>{try{const s=JSON.parse(localStorage.getItem("pnl_sort")||"null");return(s&&s.col&&s.dir)?s:{col:"net",dir:-1};}catch(e){return{col:"net",dir:-1};}})();
@@ -778,6 +817,94 @@ function renderStakeTable(){
 }
 
 /* ── TRENDS ────────────────────────────────────────────── */
+function renderStrategy(){
+  const sports=[...new Set(Object.keys(PD).map(k=>k.split("|")[0]))].sort();
+  const el=document.getElementById("stratCards");
+  if(!sports.length){el.innerHTML='<div class="no-data">Upload your CSV to track strategies per sport.</div>';return;}
+
+  // Aggregate monthly data per sport (across all formats)
+  function sportMonths(sport){
+    const allM={};
+    Object.keys(MD).filter(k=>k.startsWith(sport+"|")).forEach(k=>{
+      (MD[k]||[]).forEach(m=>{
+        if(!allM[m.month])allM[m.month]={month:m.month,count:0,fees:0,wins:0,cashed:0};
+        allM[m.month].count+=m.count;allM[m.month].fees=r2(allM[m.month].fees+m.fees);allM[m.month].wins=r2(allM[m.month].wins+m.wins);
+      });
+    });
+    return Object.values(allM).sort((a,b)=>a.month.localeCompare(b.month));
+  }
+
+  function statsFromMonths(months){
+    if(!months.length)return null;
+    const count=months.reduce((a,m)=>a+m.count,0);
+    const fees=r2(months.reduce((a,m)=>a+m.fees,0));
+    const wins=r2(months.reduce((a,m)=>a+m.wins,0));
+    const net=r2(wins-fees);
+    const roi=fees>0?r2(net/fees*100):0;
+    // cash rate from PD (across formats for this sport's months)
+    return{count,fees,wins,net,roi};
+  }
+
+  el.innerHTML=sports.map(sport=>{
+    const s=STRATEGIES[sport]||{};
+    const note=s.note||'';
+    const since=s.since||'';
+    const months=sportMonths(sport);
+
+    let statusHtml='';
+    if(note&&since){
+      const recentM=months.filter(m=>m.month>=since.slice(0,7));
+      const priorM=months.filter(m=>m.month<since.slice(0,7));
+      const recent=statsFromMonths(recentM);
+      const prior=statsFromMonths(priorM);
+
+      if(!recent||recent.count<5){
+        const n=recent?recent.count:0;
+        statusHtml=`<div class="strat-status-block strat-st-watch"><div class="strat-verdict strat-verdict-watch">⏳ Need more data <span style="font-weight:400;font-size:.72rem;color:var(--t2)">(${n} entr${n===1?'y':'ies'} since start)</span></div></div>`;
+      } else {
+        const roi=recent.roi;
+        const net=recent.net;
+        const priorRoi=prior&&prior.count>=5?prior.roi:null;
+        const roiDelta=priorRoi!=null?r2(roi-priorRoi):null;
+        const netStr=(net>=0?'+$':'-$')+Math.abs(net).toFixed(2);
+        const roiStr=(roi>=0?'+':'')+roi.toFixed(1)+'%';
+        const priorStr=priorRoi!=null?`Prior ${prior.count} entries: ${priorRoi>=0?'+':''}${priorRoi.toFixed(1)}% ROI`:'';
+        const deltaStr=roiDelta!=null?` (${roiDelta>=0?'+':''}${roiDelta.toFixed(1)}% vs prior)`:'';
+        let cls,vCls,icon,label;
+        if(roi>=-3){cls='strat-st-ok';vCls='strat-verdict-ok';icon='✓';label='Working';}
+        else if(roi>=-10){cls='strat-st-warn';vCls='strat-verdict-warn';icon='⚠';label='Monitor — underperforming';}
+        else{cls='strat-st-bad';vCls='strat-verdict-bad';icon='✗';label='Stop — not working';}
+        statusHtml=`<div class="strat-status-block ${cls}">
+          <div class="strat-verdict ${vCls}">${icon} ${label}</div>
+          <div class="strat-stats-line"><span>${recent.count} entries</span><span>Net <strong style="color:${net>=0?'var(--gr)':'var(--re)'}">${netStr}</strong></span><span>ROI <strong style="color:${roi>=0?'var(--gr)':'var(--re)'}">${roiStr}${deltaStr}</strong></span></div>
+          ${priorStr?`<div class="strat-baseline">${priorStr}</div>`:''}
+        </div>`;
+      }
+    }
+
+    const sinceLabel=since?`since ${since}`:'';
+    return `<div class="strat-card">
+      <div class="strat-card-head">
+        <span class="strat-sport-lbl">${sport}</span>
+        <span class="strat-since-badge">${sinceLabel}</span>
+      </div>
+      <div class="strat-body">
+        <div class="strat-inp-row">
+          <div class="strat-field">
+            <label class="strat-lbl">Current approach</label>
+            <input class="strat-inp" type="text" placeholder="e.g. even line stack, Portfolio+ sim…" value="${note.replace(/"/g,'&quot;')}" oninput="STRATEGIES['${sport}']=(STRATEGIES['${sport}']||{});STRATEGIES['${sport}'].note=this.value;try{localStorage.setItem('dfs_strategies',JSON.stringify(STRATEGIES));}catch(e){}renderStrategy()">
+          </div>
+          <div class="strat-field">
+            <label class="strat-lbl">Started</label>
+            <input class="strat-inp" type="date" value="${since}" onchange="STRATEGIES['${sport}']=(STRATEGIES['${sport}']||{});STRATEGIES['${sport}'].since=this.value;try{localStorage.setItem('dfs_strategies',JSON.stringify(STRATEGIES));}catch(e){}renderStrategy()">
+          </div>
+        </div>
+        ${statusHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderMonthly(){
   const keys=Object.keys(PD).filter(k=>{const[sp]=k.split("|");return SP.has("ALL")||SP.has(sp);});
   const mData={};
@@ -943,6 +1070,7 @@ let ACTIVE_TAB="dashboard";
 function renderTab(id){
   if(id==="dashboard")renderDashboard();
   else if(id==="performance"){renderPerformance();}
+  else if(id==="strategy"){renderStrategy();}
   else if(id==="trends"){renderMonthly();renderQuadrant();renderEdgeChart();}
   else if(id==="pnl"){renderPnl();renderCumPnl();}
 }
