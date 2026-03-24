@@ -105,6 +105,30 @@ button{font-family:inherit;cursor:pointer;}
 .pbs-mnt .pbs-num,.pbs-mnt .pbs-lbl{color:var(--bl);}
 .pbs-red .pbs-num,.pbs-red .pbs-lbl{color:var(--am);}
 .pbs-out .pbs-num,.pbs-out .pbs-lbl{color:var(--re);}
+/* ACTION ITEMS PANEL */
+.action-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media(max-width:900px){.action-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:560px){.action-grid{grid-template-columns:1fr;}}
+.action-card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;}
+.action-card-hdr{display:flex;align-items:center;gap:6px;margin-bottom:10px;}
+.action-card-title{font-family:"IBM Plex Mono",monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.9px;color:var(--t2);}
+.ai-list{display:flex;flex-direction:column;gap:6px;}
+.ai-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--bd);}
+.ai-item:last-child{border-bottom:none;}
+.ai-rank{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:"IBM Plex Mono",monospace;font-size:.6rem;font-weight:700;flex-shrink:0;color:var(--gr);background:var(--gr-bg);border:1px solid rgba(0,212,138,.25);margin-top:1px;}
+.ai-body{flex:1;min-width:0;}
+.ai-meta{font-family:"IBM Plex Mono",monospace;font-size:.57rem;color:var(--t2);margin-top:2px;}
+.ai-tier-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--bd);}
+.ai-tier-row:last-child{border-bottom:none;}
+.ai-tier-best{background:rgba(0,212,138,.04);border-radius:4px;padding:5px 6px;margin:0 -6px;border-bottom:none!important;}
+.ai-tier-lbl{font-family:"IBM Plex Mono",monospace;font-size:.6rem;color:var(--t2);white-space:nowrap;}
+.ai-divider{border:none;border-top:1px solid var(--bd);margin:10px 0;}
+.insights-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+@media(max-width:900px){.insights-row{grid-template-columns:repeat(2,1fr);}}
+.insight-chip{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;}
+.insight-chip-lbl{font-family:"IBM Plex Mono",monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);margin-bottom:4px;}
+.insight-chip-val{font-family:"Syne",sans-serif;font-size:.95rem;font-weight:800;line-height:1.1;}
+.insight-chip-sub{font-family:"IBM Plex Mono",monospace;font-size:.55rem;color:var(--t3);margin-top:3px;}
 .pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:12px;}
 .pb-card{background:var(--card);border:1px solid var(--bd);border-radius:10px;overflow:hidden;transition:transform .15s,box-shadow .15s;cursor:pointer;user-select:none;}
 .pb-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.3);}
@@ -390,6 +414,7 @@ button{font-family:inherit;cursor:pointer;}
     <button onclick="document.getElementById('csvOverlay').classList.add('open')" class="sample-banner-btn">Upload your CSV →</button>
   </div>
   <div class="kpi-row" id="kpiRow"></div>
+  <div id="actionItems"></div>
   <div class="panel">
     <div class="panel-hdr">
       <div><div class="panel-title">Aggregate Finish Rates vs Benchmark</div><div class="panel-sub">Weighted across all sport/format combos · tick mark = benchmark target · green = beating it</div></div>
@@ -586,6 +611,87 @@ function wagg(keys,win){
 }
 
 /* ── DASHBOARD ─────────────────────────────────────────── */
+function renderActionItems(){
+  const el=document.getElementById("actionItems");if(!el)return;
+  const pbKeys=Object.keys(PB).filter(k=>PB[k]);
+  // Top INCREASE plays by edge score
+  const topPlays=pbKeys.filter(k=>PB[k].rec==="INCREASE").sort((a,b)=>(ED[b]?.score||0)-(ED[a]?.score||0)).slice(0,4);
+  // Sit out plays by lowest edge score
+  const sitOut=pbKeys.filter(k=>PB[k].rec==="SIT OUT").sort((a,b)=>(ED[a]?.score||0)-(ED[b]?.score||0)).slice(0,4);
+  // Aggregate stake tier ROI across all keys
+  const tierAgg={penny:{count:0,fees:0,wins:0},low:{count:0,fees:0,wins:0},mid:{count:0,fees:0,wins:0},high:{count:0,fees:0,wins:0}};
+  Object.keys(SD).forEach(k=>{const sd=SD[k];if(!sd)return;["penny","low","mid","high"].forEach(t=>{const d=sd[t];if(!d||d.count<10)return;tierAgg[t].count+=d.count;tierAgg[t].fees=r2(tierAgg[t].fees+d.fees);tierAgg[t].wins=r2(tierAgg[t].wins+d.wins);});});
+  // Aggregate field size finish rates across all keys
+  const sizeAgg={small:{count:0,t10sum:0},medium:{count:0,t10sum:0},large:{count:0,t10sum:0}};
+  Object.keys(FD).forEach(k=>{const fd=FD[k];if(!fd)return;["small","medium","large"].forEach(s=>{const d=fd[s];if(!d||d.count<10)return;sizeAgg[s].count+=d.count;sizeAgg[s].t10sum+=d.top10*d.count;});});
+  // Build top plays HTML
+  const tierLabels={penny:"Penny ≤$0.25",low:"Low ≤$2",mid:"Mid ≤$5",high:"High >$5"};
+  const sizeLabels={small:"Small <500",medium:"Medium 500-5K",large:"Large >5K"};
+  const topPlaysHtml=topPlays.length?topPlays.map((k,i)=>{
+    const[sp,fmt]=k.split("|");const p=PB[k];const ed=ED[k];
+    const ref=p.ref;const roi=ref&&ref.fees>0?r2((ref.wins-ref.fees)/ref.fees*100):null;
+    const stakeAmt=BANKROLL?`<span style="font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:var(--gr);margin-left:auto">$${r2(BANKROLL*STAKE_PCT.INCREASE/100).toFixed(0)}</span>`:"";
+    const confCol=p.confidence==="HIGH"?"var(--gr)":p.confidence==="MEDIUM"?"var(--am)":"var(--t2)";
+    return`<div class="ai-item"><div class="ai-rank">${i+1}</div><div class="ai-body"><div style="display:flex;align-items:center;gap:5px">${stakeAmt}<span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;color:#fff">${sp}</span><span class="f-tag ${fmt==="Showdown"?"fmt-s":fmt==="Best Ball"?"fmt-b":"fmt-c"}">${fmt}</span></div><div class="ai-meta">Score ${ed?.score||0}/100${roi!=null?" · ROI "+(roi>=0?"+":"")+roi.toFixed(1)+"%":""} · <span style="color:${confCol}">${p.confidence}</span></div></div></div>`;
+  }).join(""):`<div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--t3);padding:6px 0">No increase plays at this time</div>`;
+  // Build sit out HTML
+  const sitOutHtml=sitOut.length?sitOut.map(k=>{
+    const[sp,fmt]=k.split("|");const p=PB[k];
+    const snippet=p.reason.length>55?p.reason.slice(0,55)+"…":p.reason;
+    return`<div class="ai-item"><div class="ai-rank" style="color:var(--re);background:var(--re-bg);border-color:rgba(255,69,96,.25)">✕</div><div class="ai-body"><div style="display:flex;align-items:center;gap:5px"><span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;color:#fff">${sp}</span><span class="f-tag ${fmt==="Showdown"?"fmt-s":fmt==="Best Ball"?"fmt-b":"fmt-c"}">${fmt}</span></div><div class="ai-meta">${snippet}</div></div></div>`;
+  }).join(""):`<div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--t3);padding:6px 0">No sit-out signals right now</div>`;
+  // Stake tier rows
+  const stakeRows=Object.entries(tierAgg).filter(([,v])=>v.count>=20&&v.fees>0).map(([t,v])=>({tier:t,roi:r2((v.wins-v.fees)/v.fees*100),count:v.count})).sort((a,b)=>b.roi-a.roi);
+  const stakeHtml=stakeRows.length?stakeRows.map((d,i)=>{
+    const col=d.roi>=0?"var(--gr)":d.roi>=-10?"var(--am)":"var(--re)";
+    return`<div class="ai-tier-row${i===0?" ai-tier-best":""}"><span class="ai-tier-lbl">${tierLabels[d.tier]}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:${col};font-weight:600">${d.roi>=0?"+":""}${d.roi.toFixed(1)}%</span><span style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--t3)">${d.count.toLocaleString()}</span></div>`;
+  }).join(""):`<div style="font-family:'IBM Plex Mono',monospace;font-size:.63rem;color:var(--t3);padding:4px 0">Add Entry Fee column to CSV</div>`;
+  // Field size rows
+  const fieldRows=Object.entries(sizeAgg).filter(([,v])=>v.count>=20).map(([s,v])=>({size:s,t10:r2(v.t10sum/v.count),count:v.count})).sort((a,b)=>b.t10-a.t10);
+  const fieldHtml=fieldRows.length?fieldRows.map((d,i)=>{
+    const col=d.t10>=BENCH.top10?"var(--gr)":d.t10>=BENCH.top10*.85?"var(--am)":"var(--re)";
+    return`<div class="ai-tier-row${i===0?" ai-tier-best":""}"><span class="ai-tier-lbl">${sizeLabels[d.size]}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:${col};font-weight:600">T10% ${d.t10.toFixed(1)}%</span><span style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--t3)">${d.count.toLocaleString()}</span></div>`;
+  }).join(""):`<div style="font-family:'IBM Plex Mono',monospace;font-size:.63rem;color:var(--t3);padding:4px 0">Add # Teams column to CSV</div>`;
+  // Key insights row (best sport by ROI, profitable months %, best format)
+  const allPD=Object.entries(PD).map(([k,v])=>({k,d:v.ALL})).filter(([,{d}])=>d&&d.count>=20);
+  const bestROI=allPD.sort((a,b)=>(b.d.roi||0)-(a.d.roi||0))[0];
+  const bestNet=allPD.slice().sort((a,b)=>(b.d.net||0)-(a.d.net||0))[0];
+  // Profitable months %
+  const allMNet={};Object.keys(MD).forEach(k=>{(MD[k]||[]).forEach(m=>{if(m.net!=null){if(!allMNet[m.month])allMNet[m.month]=0;allMNet[m.month]=r2(allMNet[m.month]+m.net);}});});
+  const moArr=Object.values(allMNet);const profMoPct=moArr.length?Math.round(moArr.filter(n=>n>=0).length/moArr.length*100):null;
+  // Best momentum play
+  const bestMom=pbKeys.filter(k=>PB[k].mom>0).sort((a,b)=>PB[b].mom-PB[a].mom)[0];
+  el.innerHTML=`
+<div style="display:flex;flex-direction:column;gap:14px">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:-4px">
+    <div style="font-size:.88rem;font-weight:600;color:var(--tx)">Action Items</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:var(--t3)">based on 6-month performance + trend</div>
+  </div>
+  <div class="action-grid">
+    <div class="action-card" style="border-color:rgba(0,212,138,.2);background:rgba(0,212,138,.03)">
+      <div class="action-card-hdr"><span style="color:var(--gr);font-size:.85rem">↑</span><span class="action-card-title" style="color:var(--gr)">Top Plays — Increase Stake</span></div>
+      <div class="ai-list">${topPlaysHtml}</div>
+    </div>
+    <div class="action-card" style="border-color:rgba(255,69,96,.2);background:rgba(255,69,96,.03)">
+      <div class="action-card-hdr"><span style="color:var(--re);font-size:.85rem">✕</span><span class="action-card-title" style="color:var(--re)">Sit Out — Skip These</span></div>
+      <div class="ai-list">${sitOutHtml}</div>
+    </div>
+    <div class="action-card">
+      <div class="action-card-hdr"><span class="action-card-title">ROI by Stake Tier</span></div>
+      <div>${stakeHtml}</div>
+      <hr class="ai-divider">
+      <div class="action-card-hdr" style="margin-bottom:8px;margin-top:0"><span class="action-card-title">Top 10% Finish by Field Size</span></div>
+      <div>${fieldHtml}</div>
+    </div>
+  </div>
+  <div class="insights-row">
+    ${bestROI?`<div class="insight-chip"><div class="insight-chip-lbl">Best ROI Sport</div><div class="insight-chip-val" style="color:var(--gr)">${bestROI.k.split("|")[0]}</div><div class="insight-chip-sub">${bestROI.d.roi>=0?"+":""}${bestROI.d.roi.toFixed(1)}% · ${bestROI.d.count.toLocaleString()} entries</div></div>`:""}
+    ${bestNet?`<div class="insight-chip"><div class="insight-chip-lbl">Most Profitable Sport</div><div class="insight-chip-val" style="color:${bestNet.d.net>=0?"var(--gr)":"var(--re)"}">${bestNet.k.split("|")[0]}</div><div class="insight-chip-sub">${bestNet.d.net>=0?"+$":"-$"}${Math.abs(bestNet.d.net).toFixed(0)} net</div></div>`:""}
+    ${profMoPct!=null?`<div class="insight-chip"><div class="insight-chip-lbl">Profitable Months</div><div class="insight-chip-val" style="color:${profMoPct>=50?"var(--gr)":profMoPct>=33?"var(--am)":"var(--re)"}">${profMoPct}%</div><div class="insight-chip-sub">${Object.values(allMNet).filter(n=>n>=0).length} of ${moArr.length} months</div></div>`:""}
+    ${bestMom?`<div class="insight-chip"><div class="insight-chip-lbl">Best Momentum</div><div class="insight-chip-val" style="color:var(--gr)">${bestMom.split("|")[0]}</div><div class="insight-chip-sub">${bestMom.split("|")[1]} · rising trend</div></div>`:""}
+  </div>
+</div>`;
+}
 function renderDashboard(){
   const keys=Object.keys(PD);
   const allItems=keys.map(k=>PD[k].ALL).filter(Boolean);
@@ -738,6 +844,7 @@ function renderDashboard(){
       <div class="pb-tog-row"><span class="pb-tog pb-tog-show">▼ details</span><span class="pb-tog pb-tog-hide">▲ collapse</span></div>
     </div>`;
   }).join("");
+  renderActionItems();
 }
 
 /* ── PERFORMANCE ───────────────────────────────────────── */
@@ -1494,6 +1601,7 @@ document.getElementById("pbGrid").addEventListener("keydown",e=>{if((e.key===" "
   document.querySelectorAll("#cumMode .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===CUM_MODE));
   document.querySelectorAll("#pnlChartMode .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===PNL_CHART_MODE));
 })();
+loadFromStorage();
 recomputeScores();render();
 if(typeof updateSampleBanner==="function")updateSampleBanner();
 </script></body>
