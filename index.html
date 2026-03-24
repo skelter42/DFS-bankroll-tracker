@@ -1601,7 +1601,6 @@ document.getElementById("pbGrid").addEventListener("keydown",e=>{if((e.key===" "
   document.querySelectorAll("#cumMode .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===CUM_MODE));
   document.querySelectorAll("#pnlChartMode .win-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===PNL_CHART_MODE));
 })();
-loadFromStorage();
 recomputeScores();render();
 if(typeof updateSampleBanner==="function")updateSampleBanner();
 </script></body>
