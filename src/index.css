@@ -1,0 +1,27 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0B0E13;
+  color: #E8EAED;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.display {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+::selection {
+  background: #C9A227;
+  color: #0B0E13;
+}
+
+select:focus,
+button:focus-visible {
+  outline: 2px solid #C9A227;
+  outline-offset: 2px;
+}
