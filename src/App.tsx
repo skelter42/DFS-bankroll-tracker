@@ -39,6 +39,7 @@ export default function App() {
   const [customFrom,  setCustomFrom]  = useState('');
   const [customTo,    setCustomTo]    = useState('');
   const [loading,     setLoading]     = useState(true);
+  const [parsing,     setParsing]     = useState(false);
 
   useEffect(() => {
     loadSaved().then(saved => {
@@ -49,6 +50,7 @@ export default function App() {
   const handleFile = useCallback((file: File) => {
     setError('');
     setFileName(file.name);
+    setParsing(true);
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
@@ -76,18 +78,21 @@ export default function App() {
           if (data.length === 0) {
             setError("No usable rows found. Check this is a DraftKings contest history export.");
             setRows(null);
+            setParsing(false);
             return;
           }
           setRows(data);
           setSportFilter([]); setMaxFilter([]); setFeeFilter([]);
           setDateFilter('all'); setCustomFrom(''); setCustomTo('');
           saveEntries(data, file.name);
+          setParsing(false);
         } catch {
           setError("Couldn't parse that file. Make sure it's an unmodified DK export.");
           setRows(null);
+          setParsing(false);
         }
       },
-      error: () => setError("Couldn't read that file."),
+      error: () => { setError("Couldn't read that file."); setParsing(false); },
     });
   }, []);
 
@@ -263,25 +268,34 @@ export default function App() {
         </div>
 
         {/* ── Upload ─────────────────────────────────────── */}
-        {!rows && !loading && <UploadZone onFile={handleFile} error={error} />}
+        {!rows && !loading && !parsing && <UploadZone onFile={handleFile} error={error} />}
+
+        {/* ── Parsing ────────────────────────────────────── */}
+        {parsing && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '64px 0', gap: 16 }}>
+            <div className="parse-spinner" />
+            <div style={{ color: T.textMuted, fontSize: 14 }}>Parsing your contest history…</div>
+          </div>
+        )}
 
         {/* ── Loaded ─────────────────────────────────────── */}
-        {rows && (
+        {rows && !parsing && (
           <div>
             {/* file bar */}
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              marginBottom: 24, paddingBottom: 16, borderBottom: `1px solid ${T.border}`,
+              marginBottom: 16, padding: '10px 14px',
+              background: T.panel, border: `1px solid ${T.border}`, borderRadius: 6,
             }}>
               <div className="mono" style={{ fontSize: 12, color: T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                 {fileName} · {rows.length.toLocaleString()} entries loaded
               </div>
               <button onClick={reset} style={{
                 background: 'none', border: `1px solid ${T.border}`, color: T.textMuted,
-                borderRadius: 4, padding: '10px 12px', fontSize: 12, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                borderRadius: 4, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, marginLeft: 12,
               }}>
-                <X size={13} /> Clear
+                <X size={12} /> Clear
               </button>
             </div>
 

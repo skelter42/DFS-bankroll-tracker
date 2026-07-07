@@ -55,6 +55,19 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.parse-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #232935;
+  border-top-color: #C9A227;
+  animation: spin 700ms linear infinite;
+}
+
 button:not(:disabled):hover {
   opacity: 0.82;
 }

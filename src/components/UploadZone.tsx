@@ -29,8 +29,8 @@ export function UploadZone({ onFile, error }: Props) {
           gap: 12,
           border: `1px dashed ${dragOver ? T.gold : T.border}`,
           background: dragOver ? 'rgba(201,162,39,0.06)' : T.panel,
-          borderRadius: 4,
-          padding: '56px 24px',
+          borderRadius: 6,
+          padding: '48px 24px',
           cursor: 'pointer',
           transition: 'border-color 120ms, background 120ms',
         }}
@@ -65,6 +65,44 @@ export function UploadZone({ onFile, error }: Props) {
           <span>{error}</span>
         </div>
       )}
+
+      {/* DraftKings export instructions */}
+      <div style={{
+        marginTop: 16,
+        background: T.panel,
+        border: `1px solid ${T.border}`,
+        borderRadius: 6,
+        padding: '14px 16px',
+      }}>
+        <div style={{
+          fontSize: 11, color: T.textMuted, letterSpacing: '0.06em',
+          textTransform: 'uppercase', marginBottom: 10,
+        }}>
+          How to export from DraftKings
+        </div>
+        <ol style={{
+          margin: 0, paddingLeft: 18,
+          display: 'flex', flexDirection: 'column', gap: 6,
+        }}>
+          {[
+            <>Go to <strong style={{ color: T.textPrimary }}>DraftKings.com</strong> and sign in</>,
+            <>Click <strong style={{ color: T.textPrimary }}>Contests</strong> in the top navigation</>,
+            <>Select <strong style={{ color: T.textPrimary }}>Contest History</strong> from the dropdown</>,
+            <>Click <strong style={{ color: T.textPrimary }}>Download CSV</strong> — the file saves to your device</>,
+          ].map((step, i) => (
+            <li key={i} style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.5 }}>
+              {step}
+            </li>
+          ))}
+        </ol>
+        <div style={{
+          marginTop: 10, paddingTop: 10,
+          borderTop: `1px solid ${T.border}`,
+          fontSize: 12, color: T.textMuted, lineHeight: 1.5,
+        }}>
+          Your CSV never leaves your browser — all processing happens locally.
+        </div>
+      </div>
     </div>
   );
 }
