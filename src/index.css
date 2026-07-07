@@ -4,6 +4,35 @@ body {
   background: #0B0E13;
   color: #E8EAED;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── Responsive layout ───────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 36px;
+}
+
+@media (max-width: 580px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .site-header {
+    flex-direction: column;
+    gap: 14px;
+  }
+  .discord-btn {
+    align-self: flex-start;
+  }
 }
 
 .mono {

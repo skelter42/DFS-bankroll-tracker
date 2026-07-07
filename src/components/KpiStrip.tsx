@@ -17,16 +17,16 @@ export function KpiStrip({ kpis }: { kpis: Kpis }) {
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
+    <div className="kpi-grid">
       {tiles.map(({ label, value, color }) => (
         <div key={label} style={{
           background: T.panel, border: `1px solid ${T.border}`,
-          borderRadius: 6, padding: '14px 16px',
+          borderRadius: 6, padding: '14px 16px', minWidth: 0,
         }}>
           <div style={{ fontSize: 10, color: T.textMuted, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
             {label}
           </div>
-          <div className="mono" style={{ fontSize: 20, fontWeight: 600, color }}>
+          <div className="mono" style={{ fontSize: 18, fontWeight: 600, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {value}
           </div>
         </div>

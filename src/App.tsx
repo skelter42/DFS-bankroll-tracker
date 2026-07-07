@@ -218,7 +218,7 @@ export default function App() {
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '32px 20px 80px' }}>
 
         {/* ── Header ─────────────────────────────────────── */}
-        <div style={{ marginBottom: 36, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div className="site-header">
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
               <h1 className="display" style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
@@ -236,11 +236,12 @@ export default function App() {
             href="https://discord.gg/ZHU5frV3C"
             target="_blank"
             rel="noreferrer"
+            className="discord-btn"
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
               background: 'rgba(88,101,242,0.12)',
               border: '1px solid rgba(88,101,242,0.35)',
-              borderRadius: 6, padding: '7px 12px',
+              borderRadius: 6, padding: '9px 14px',
               fontSize: 13, color: '#8B9CF4',
               textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
               transition: 'background 150ms, border-color 150ms, color 150ms',
@@ -272,13 +273,13 @@ export default function App() {
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               marginBottom: 24, paddingBottom: 16, borderBottom: `1px solid ${T.border}`,
             }}>
-              <div className="mono" style={{ fontSize: 12, color: T.textMuted }}>
+              <div className="mono" style={{ fontSize: 12, color: T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                 {fileName} · {rows.length.toLocaleString()} entries loaded
               </div>
               <button onClick={reset} style={{
                 background: 'none', border: `1px solid ${T.border}`, color: T.textMuted,
-                borderRadius: 4, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 6,
+                borderRadius: 4, padding: '10px 12px', fontSize: 12, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
               }}>
                 <X size={13} /> Clear
               </button>

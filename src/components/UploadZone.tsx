@@ -40,7 +40,7 @@ export function UploadZone({ onFile, error }: Props) {
           <div style={{ fontSize: 14, fontWeight: 500, color: T.textPrimary }}>
             Drop your contest history CSV, or click to browse
           </div>
-          <div className="mono" style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>
+          <div className="mono" style={{ fontSize: 12, color: T.textMuted, marginTop: 4, wordBreak: 'break-all' }}>
             draftkings-contest-entry-history.csv
           </div>
         </div>

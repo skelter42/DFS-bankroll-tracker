@@ -47,12 +47,14 @@ const dateInputStyle: CSSProperties = {
   background:   T.panel,
   border:       `1px solid ${T.border}`,
   borderRadius: 5,
-  padding:      '6px 10px',
-  fontSize:     12,
+  padding:      '10px 10px',
+  fontSize:     13,
   color:        T.textPrimary,
   outline:      'none',
   colorScheme:  'dark',
   transition:   'border-color 150ms',
+  flex:         '1',
+  minWidth:     120,
 };
 
 const divider = <div style={{ height: 1, background: '#2A3040', margin: '4px 0' }} />;
@@ -60,13 +62,14 @@ const divider = <div style={{ height: 1, background: '#2A3040', margin: '4px 0' 
 // ── Pill ──────────────────────────────────────────────
 
 function Pill({
-  label, active, isOpen, onToggle, accent = T.gold, children,
+  label, active, isOpen, onToggle, accent = T.gold, align = 'left', children,
 }: {
   label: string;
   active: boolean;
   isOpen: boolean;
   onToggle: () => void;
   accent?: string;
+  align?: 'left' | 'right';
   children: ReactNode;
 }) {
   const lit = active || isOpen;
@@ -82,12 +85,13 @@ function Pill({
           border:       `1px solid ${lit ? accent : T.border}`,
           borderRadius: 6,
           color:        lit ? T.textPrimary : T.textMuted,
-          padding:      '7px 12px',
+          padding:      '10px 14px',
           fontSize:     13,
           cursor:       'pointer',
           transition:   'background 150ms, border-color 150ms, color 150ms, opacity 120ms',
           whiteSpace:   'nowrap',
           userSelect:   'none',
+          minHeight:    44,
         }}
       >
         {label}
@@ -103,12 +107,13 @@ function Pill({
         <div className="fd-panel" style={{
           position:     'absolute',
           top:          'calc(100% + 6px)',
-          left:         0,
+          ...(align === 'right' ? { right: 0 } : { left: 0 }),
           background:   '#161B26',
           border:       '1px solid #2A3040',
           borderRadius: 8,
           boxShadow:    '0 16px 48px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(255,255,255,0.03)',
           minWidth:     190,
+          maxWidth:     'min(260px, calc(100vw - 32px))',
           maxHeight:    280,
           overflowY:    'auto',
           zIndex:       10,
@@ -144,7 +149,8 @@ function DropItem({
         alignItems:     'center',
         justifyContent: 'space-between',
         width:          '100%',
-        padding:        '8px 14px',
+        padding:        '11px 14px',
+        minHeight:      44,
         background:     hov ? 'rgba(255,255,255,0.04)' : 'transparent',
         border:         'none',
         color:          checked ? T.gold : T.textPrimary,
@@ -258,7 +264,8 @@ export function FilterBar({
 
         <Pill
           label={DATE_LABEL[dateFilter]} active={dateFilter !== 'all'}
-          isOpen={open === 'date'} onToggle={() => toggleOpen('date')} accent={T.blue}
+          isOpen={open === 'date'} onToggle={() => toggleOpen('date')}
+          accent={T.blue} align="right"
         >
           {DATE_OPTS.map(([key, label]) => (
             <DropItem key={key} label={label} checked={dateFilter === key} radio
@@ -271,20 +278,21 @@ export function FilterBar({
             onClick={() => { onSportFilter([]); onMaxFilter([]); onFeeFilter([]); onDateFilter('all'); }}
             style={{
               background: 'none', border: 'none', color: T.textMuted,
-              fontSize: 12, cursor: 'pointer', padding: '4px 2px', transition: 'color 150ms',
+              fontSize: 13, cursor: 'pointer', padding: '10px 8px',
+              minHeight: 44, transition: 'color 150ms',
             }}
             onMouseEnter={e => (e.currentTarget.style.color = T.textPrimary)}
             onMouseLeave={e => (e.currentTarget.style.color = T.textMuted)}
           >
-            Reset filters
+            Reset
           </button>
         )}
       </div>
 
       {dateFilter === 'custom' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, paddingLeft: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, paddingLeft: 2, flexWrap: 'wrap' }}>
           <input type="date" value={customFrom} onChange={e => onCustomFrom(e.target.value)} style={dateInputStyle} />
-          <span style={{ color: T.textMuted, fontSize: 12 }}>→</span>
+          <span style={{ color: T.textMuted, fontSize: 12, flexShrink: 0 }}>→</span>
           <input type="date" value={customTo} onChange={e => onCustomTo(e.target.value)} style={dateInputStyle} />
         </div>
       )}
