@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import Papa from 'papaparse';
 import { X } from 'lucide-react';
 import { BASELINES, NOISE_FLOOR, T } from './constants';
 import { parseMoney, extractMax } from './lib/parse';
+import { saveEntries, loadSaved, clearSaved } from './lib/storage';
 import { UploadZone } from './components/UploadZone';
 import { FilterBar } from './components/FilterBar';
 import { OverallCard, SportCard } from './components/StatsCard';
@@ -32,6 +33,17 @@ export default function App() {
   const [maxFilter,  setMaxFilter]  = useState<number | null>(null);
   const [feeFilter,  setFeeFilter]  = useState<number | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [loading,    setLoading]    = useState(true);
+
+  // Restore from IndexedDB on first load
+  useEffect(() => {
+    loadSaved().then(saved => {
+      if (saved) {
+        setRows(saved.entries);
+        setFileName(saved.fileName);
+      }
+    }).finally(() => setLoading(false));
+  }, []);
 
   const handleFile = useCallback((file: File) => {
     setError('');
@@ -69,6 +81,7 @@ export default function App() {
           setMaxFilter(null);
           setFeeFilter(null);
           setDateFilter('all');
+          saveEntries(data, file.name);
         } catch {
           setError("Couldn't parse that file. Make sure it's an unmodified DK export.");
           setRows(null);
@@ -152,7 +165,7 @@ export default function App() {
     };
   }, [filtered]);
 
-  const reset = () => { setRows(null); setFileName(''); setError(''); };
+  const reset = () => { setRows(null); setFileName(''); setError(''); clearSaved(); };
 
   return (
     <div style={{
@@ -180,7 +193,7 @@ export default function App() {
         </div>
 
         {/* ── Upload ─────────────────────────────────────── */}
-        {!rows && <UploadZone onFile={handleFile} error={error} />}
+        {!rows && !loading && <UploadZone onFile={handleFile} error={error} />}
 
         {/* ── Loaded ─────────────────────────────────────── */}
         {rows && (
