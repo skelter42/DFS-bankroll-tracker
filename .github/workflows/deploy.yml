@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Build & Deploy
 
 on:
   push:
@@ -6,19 +6,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,9 +25,33 @@ jobs:
 
       - run: npm run build
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
+      # Copy the single-file build to repo root so GitHub Pages serves it directly
+      - run: cp dist/index.html index.html
 
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      # Commit the updated index.html back to main
+      - name: Commit built index.html
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || git commit -m "build: update index.html [skip ci]"
+          git push
+
+      # Enable GitHub Pages from main branch root (idempotent — safe to run every time)
+      - name: Enable GitHub Pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/pages \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -f build_type=legacy \
+            -f "source[branch]=main" \
+            -f "source[path]=/" \
+            2>/dev/null || \
+          gh api repos/${{ github.repository }}/pages \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            -f "source[branch]=main" \
+            -f "source[path]=/" \
+            2>/dev/null || true
