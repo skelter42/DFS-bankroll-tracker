@@ -2,7 +2,7 @@ name: Build & Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']
   workflow_dispatch:
 
 permissions:
@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need full history to switch branches
 
       - uses: actions/setup-node@v4
         with:
@@ -25,19 +27,19 @@ jobs:
 
       - run: npm run build
 
-      # Copy the single-file build to repo root so GitHub Pages serves it directly
-      - run: cp dist/index.html index.html
-
-      # Commit the updated index.html back to main
-      - name: Commit built index.html
+      # Push the built index.html directly to main so Pages deploys it
+      - name: Deploy to main
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+          cp $GITHUB_WORKSPACE/dist/index.html index.html
           git add index.html
-          git diff --staged --quiet || git commit -m "build: update index.html [skip ci]"
-          git push
+          git diff --staged --quiet || git commit -m "build: deploy from ${{ github.ref_name }} [skip ci]"
+          git push origin main
 
-      # Enable GitHub Pages from main branch root (idempotent — safe to run every time)
+      # Enable GitHub Pages from main branch root (idempotent)
       - name: Enable GitHub Pages
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
