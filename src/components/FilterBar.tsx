@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { T } from '../constants';
 import type { MaxSize, FeeOption, DateFilter } from '../types';
@@ -72,11 +72,30 @@ function Pill({
   align?: 'left' | 'right';
   children: ReactNode;
 }) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [panelSide, setPanelSide] = useState<'left' | 'right'>(align);
   const lit = active || isOpen;
+
+  const handleToggle = () => {
+    if (!isOpen && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const dropW = 260;
+      const spaceRight = window.innerWidth - rect.left - 16;
+      const spaceLeft  = rect.right - 16;
+      if (align === 'right') {
+        setPanelSide(spaceLeft >= dropW ? 'right' : 'left');
+      } else {
+        setPanelSide(spaceRight >= dropW ? 'left' : 'right');
+      }
+    }
+    onToggle();
+  };
+
   return (
     <div style={{ position: 'relative' }}>
       <button
-        onClick={onToggle}
+        ref={btnRef}
+        onClick={handleToggle}
         style={{
           display:      'inline-flex',
           alignItems:   'center',
@@ -107,7 +126,7 @@ function Pill({
         <div className="fd-panel" style={{
           position:     'absolute',
           top:          'calc(100% + 6px)',
-          ...(align === 'right' ? { right: 0 } : { left: 0 }),
+          ...(panelSide === 'right' ? { right: 0 } : { left: 0 }),
           background:   '#161B26',
           border:       '1px solid #2A3040',
           borderRadius: 8,
