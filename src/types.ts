@@ -44,4 +44,4 @@ export interface FeeOption {
   count: number;
 }
 
-export type DateFilter = 'all' | '30' | '60' | '90';
+export type DateFilter = 'all' | '30' | '60' | '90' | 'custom';

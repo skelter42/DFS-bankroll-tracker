@@ -29,21 +29,20 @@ function makeBands(entries: Entry[]): Band[] {
 }
 
 export default function App() {
-  const [rows,       setRows]       = useState<Entry[] | null>(null);
-  const [fileName,   setFileName]   = useState('');
-  const [error,      setError]      = useState('');
-  const [maxFilter,  setMaxFilter]  = useState<number | null>(null);
-  const [feeFilter,  setFeeFilter]  = useState<number | null>(null);
-  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
-  const [loading,    setLoading]    = useState(true);
+  const [rows,        setRows]        = useState<Entry[] | null>(null);
+  const [fileName,    setFileName]    = useState('');
+  const [error,       setError]       = useState('');
+  const [sportFilter, setSportFilter] = useState<string[]>([]);
+  const [maxFilter,   setMaxFilter]   = useState<number[]>([]);
+  const [feeFilter,   setFeeFilter]   = useState<number[]>([]);
+  const [dateFilter,  setDateFilter]  = useState<DateFilter>('all');
+  const [customFrom,  setCustomFrom]  = useState('');
+  const [customTo,    setCustomTo]    = useState('');
+  const [loading,     setLoading]     = useState(true);
 
-  // Restore from IndexedDB on first load
   useEffect(() => {
     loadSaved().then(saved => {
-      if (saved) {
-        setRows(saved.entries);
-        setFileName(saved.fileName);
-      }
+      if (saved) { setRows(saved.entries); setFileName(saved.fileName); }
     }).finally(() => setLoading(false));
   }, []);
 
@@ -61,15 +60,15 @@ export default function App() {
               const entries = parseFloat(r.Contest_Entries);
               if (!r.Sport || isNaN(place) || isNaN(entries) || entries <= 0) return null;
               return {
-                sport:      r.Sport,
-                entryName:  r.Entry ?? '',
-                date:       r.Contest_Date_EST ? new Date(r.Contest_Date_EST) : null,
+                sport:     r.Sport,
+                entryName: r.Entry ?? '',
+                date:      r.Contest_Date_EST ? new Date(r.Contest_Date_EST) : null,
                 place,
                 entries,
-                pct:        place / entries,
-                fee:        parseMoney(r.Entry_Fee),
-                winnings:   parseMoney(r.Winnings_Non_Ticket) + parseMoney(r.Winnings_Ticket),
-                maxSize:    extractMax(r.Entry),
+                pct:       place / entries,
+                fee:       parseMoney(r.Entry_Fee),
+                winnings:  parseMoney(r.Winnings_Non_Ticket) + parseMoney(r.Winnings_Ticket),
+                maxSize:   extractMax(r.Entry),
               };
             })
             .filter((r): r is Entry => r !== null);
@@ -80,9 +79,8 @@ export default function App() {
             return;
           }
           setRows(data);
-          setMaxFilter(null);
-          setFeeFilter(null);
-          setDateFilter('all');
+          setSportFilter([]); setMaxFilter([]); setFeeFilter([]);
+          setDateFilter('all'); setCustomFrom(''); setCustomTo('');
           saveEntries(data, file.name);
         } catch {
           setError("Couldn't parse that file. Make sure it's an unmodified DK export.");
@@ -93,6 +91,13 @@ export default function App() {
     });
   }, []);
 
+  const sports = useMemo(() => {
+    if (!rows) return [];
+    const s = new Set<string>();
+    rows.forEach(r => { if (r.sport) s.add(r.sport); });
+    return [...s].sort();
+  }, [rows]);
+
   const maxSizes = useMemo(() => {
     if (!rows) return [];
     const counts: Record<number, number> = {};
@@ -102,21 +107,19 @@ export default function App() {
       .map(([size, count]) => ({ size: parseInt(size, 10), count }));
   }, [rows]);
 
-  const feesForMax = useMemo(() => {
-    if (!rows || maxFilter === null) return [];
+  const allFees = useMemo(() => {
+    if (!rows) return [];
     const counts: Record<string, number> = {};
     rows.forEach(r => {
-      if (r.maxSize === maxFilter) {
-        const key = r.fee.toFixed(2);
-        counts[key] = (counts[key] ?? 0) + 1;
-      }
+      const key = r.fee.toFixed(2);
+      counts[key] = (counts[key] ?? 0) + 1;
     });
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
       .map(([fee, count]) => ({ fee: parseFloat(fee), count }));
-  }, [rows, maxFilter]);
+  }, [rows]);
 
-  const maxDate = useMemo(() => {
+  const maxDate = useMemo((): Date | null => {
     if (!rows) return null;
     let max: Date | null = null;
     rows.forEach(r => { if (r.date && (!max || r.date > max)) max = r.date; });
@@ -124,16 +127,24 @@ export default function App() {
   }, [rows]);
 
   const filtered = useMemo(() => {
-    if (!rows || maxFilter === null) return [];
-    let out = rows.filter(r => r.maxSize === maxFilter);
-    if (feeFilter !== null) out = out.filter(r => Math.abs(r.fee - feeFilter) < 0.001);
-    if (dateFilter !== 'all' && maxDate) {
-      const days   = parseInt(dateFilter, 10);
-      const cutoff = new Date(maxDate.getTime() - days * 86_400_000);
-      out = out.filter(r => r.date && r.date >= cutoff);
+    if (!rows) return [];
+    let out = [...rows];
+    if (sportFilter.length > 0) out = out.filter(r => sportFilter.includes(r.sport));
+    if (maxFilter.length > 0) out = out.filter(r => r.maxSize !== null && maxFilter.includes(r.maxSize));
+    if (feeFilter.length > 0) out = out.filter(r => feeFilter.some(f => Math.abs(r.fee - f) < 0.001));
+    if (dateFilter === 'custom') {
+      if (customFrom) out = out.filter(r => r.date && r.date >= new Date(customFrom));
+      if (customTo)   out = out.filter(r => r.date && r.date <= new Date(customTo + 'T23:59:59'));
+    } else if (dateFilter !== 'all') {
+      const md = maxDate;
+      if (md) {
+        const days   = parseInt(dateFilter, 10);
+        const cutoff = new Date(md.getTime() - days * 86_400_000);
+        out = out.filter(r => r.date && r.date >= cutoff);
+      }
     }
     return out;
-  }, [rows, maxFilter, feeFilter, dateFilter, maxDate]);
+  }, [rows, sportFilter, maxFilter, feeFilter, dateFilter, maxDate, customFrom, customTo]);
 
   const bySport = useMemo(() => {
     const groups: Record<string, Entry[]> = {};
@@ -169,16 +180,16 @@ export default function App() {
 
   const kpis = useMemo(() => {
     if (!rows) return null;
-    const fees     = rows.reduce((s, r) => s + r.fee, 0);
-    const winnings = rows.reduce((s, r) => s + r.winnings, 0);
+    const fees     = filtered.reduce((s, r) => s + r.fee, 0);
+    const winnings = filtered.reduce((s, r) => s + r.winnings, 0);
     const net      = winnings - fees;
-    return { entries: rows.length, fees, winnings, net, roi: fees > 0 ? net / fees : 0 };
-  }, [rows]);
+    return { entries: filtered.length, fees, winnings, net, roi: fees > 0 ? net / fees : 0 };
+  }, [rows, filtered]);
 
   const monthlyPnl = useMemo(() => {
     if (!rows) return [];
     const byMonth: Record<string, { fees: number; winnings: number }> = {};
-    rows.forEach(r => {
+    filtered.forEach(r => {
       if (!r.date) return;
       const m = r.date.toISOString().slice(0, 7);
       if (!byMonth[m]) byMonth[m] = { fees: 0, winnings: 0 };
@@ -188,9 +199,14 @@ export default function App() {
     return Object.entries(byMonth)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, v]) => ({ month: month.slice(2), net: v.winnings - v.fees }));
-  }, [rows]);
+  }, [rows, filtered]);
 
-  const reset = () => { setRows(null); setFileName(''); setError(''); clearSaved(); };
+  const reset = () => {
+    setRows(null); setFileName(''); setError('');
+    setSportFilter([]); setMaxFilter([]); setFeeFilter([]);
+    setDateFilter('all'); setCustomFrom(''); setCustomTo('');
+    clearSaved();
+  };
 
   return (
     <div style={{
@@ -243,29 +259,30 @@ export default function App() {
             <MonthlyChart data={monthlyPnl} />
 
             <FilterBar
+              sports={sports}
+              sportFilter={sportFilter}
+              onSportFilter={setSportFilter}
               maxSizes={maxSizes}
               maxFilter={maxFilter}
-              onMaxFilter={(size) => { setMaxFilter(size); setFeeFilter(null); }}
-              feesForMax={feesForMax}
+              onMaxFilter={setMaxFilter}
+              allFees={allFees}
               feeFilter={feeFilter}
               onFeeFilter={setFeeFilter}
               dateFilter={dateFilter}
               onDateFilter={setDateFilter}
+              customFrom={customFrom}
+              customTo={customTo}
+              onCustomFrom={setCustomFrom}
+              onCustomTo={setCustomTo}
             />
 
-            {maxFilter === null && (
-              <div style={{ color: T.textMuted, fontSize: 14, padding: '24px 0' }}>
-                Pick a contest max size above to see your baseline-vs-actual breakdown.
-              </div>
-            )}
-
-            {maxFilter !== null && filtered.length === 0 && (
+            {filtered.length === 0 && (
               <div style={{ color: T.textMuted, fontSize: 14, padding: '24px 0' }}>
                 No entries match that combination.
               </div>
             )}
 
-            {maxFilter !== null && overall && (
+            {overall && (
               <>
                 <OverallCard stat={overall} />
 

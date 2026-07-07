@@ -25,3 +25,16 @@ button:focus-visible {
   outline: 2px solid #C9A227;
   outline-offset: 2px;
 }
+
+button:not(:disabled):hover {
+  opacity: 0.82;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+input[type="date"]:focus {
+  border-color: #4C6FA5;
+  outline: none;
+}
