@@ -7,6 +7,8 @@ import { saveEntries, loadSaved, clearSaved } from './lib/storage';
 import { UploadZone } from './components/UploadZone';
 import { FilterBar } from './components/FilterBar';
 import { OverallCard, SportCard } from './components/StatsCard';
+import { KpiStrip } from './components/KpiStrip';
+import { MonthlyChart } from './components/MonthlyChart';
 import type { Entry, Band, DateFilter } from './types';
 
 function makeBands(entries: Entry[]): Band[] {
@@ -165,6 +167,29 @@ export default function App() {
     };
   }, [filtered]);
 
+  const kpis = useMemo(() => {
+    if (!rows) return null;
+    const fees     = rows.reduce((s, r) => s + r.fee, 0);
+    const winnings = rows.reduce((s, r) => s + r.winnings, 0);
+    const net      = winnings - fees;
+    return { entries: rows.length, fees, winnings, net, roi: fees > 0 ? net / fees : 0 };
+  }, [rows]);
+
+  const monthlyPnl = useMemo(() => {
+    if (!rows) return [];
+    const byMonth: Record<string, { fees: number; winnings: number }> = {};
+    rows.forEach(r => {
+      if (!r.date) return;
+      const m = r.date.toISOString().slice(0, 7);
+      if (!byMonth[m]) byMonth[m] = { fees: 0, winnings: 0 };
+      byMonth[m].fees     += r.fee;
+      byMonth[m].winnings += r.winnings;
+    });
+    return Object.entries(byMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, v]) => ({ month: month.slice(2), net: v.winnings - v.fees }));
+  }, [rows]);
+
   const reset = () => { setRows(null); setFileName(''); setError(''); clearSaved(); };
 
   return (
@@ -180,15 +205,14 @@ export default function App() {
         <div style={{ marginBottom: 36 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
             <h1 className="display" style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
-              EDGE
+              Slate Tracker
             </h1>
             <span className="mono" style={{ fontSize: 12, color: T.textMuted, letterSpacing: '0.08em' }}>
               v0.1
             </span>
           </div>
           <p style={{ margin: '6px 0 0', color: T.textMuted, fontSize: 14, maxWidth: 480, lineHeight: 1.5 }}>
-            Upload your DraftKings contest history. See whether your finishes are actually beating
-            the field — or just tracking it.
+            Upload your DraftKings contest history. Track your bankroll and see exactly where you're beating the field.
           </p>
         </div>
 
@@ -214,6 +238,9 @@ export default function App() {
                 <X size={13} /> Clear
               </button>
             </div>
+
+            {kpis && <KpiStrip kpis={kpis} />}
+            <MonthlyChart data={monthlyPnl} />
 
             <FilterBar
               maxSizes={maxSizes}
