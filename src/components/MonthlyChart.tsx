@@ -40,8 +40,11 @@ function fmtY(v: number): string {
 export function MonthlyChart({ data }: { data: Month[] }) {
   if (data.length < 2) return null;
 
-  const maxAbs = Math.max(...data.map(d => Math.abs(d.net)), 1);
-  const yMax   = niceMax(maxAbs);
+  // Scale to 90th-percentile so typical months fill the chart;
+  // outlier bars are capped at the ceiling rather than shrinking everything else.
+  const sorted = [...data.map(d => Math.abs(d.net))].sort((a, b) => a - b);
+  const p90    = sorted[Math.min(Math.floor(sorted.length * 0.9), sorted.length - 1)];
+  const yMax   = niceMax(Math.max(p90, 1));
   const mid    = yMax / 2;
   const ticks  = [mid, yMax];
 
@@ -121,7 +124,8 @@ export function MonthlyChart({ data }: { data: Month[] }) {
               {/* Bars (position:relative renders over gridlines) */}
               <div style={{ display: 'flex', height: '100%', position: 'relative' }}>
                 {data.map((d) => {
-                  const h   = Math.round(Math.abs(d.net) / yMax * HALF);
+                  const raw = Math.abs(d.net) / yMax * HALF;
+                  const h   = Math.min(Math.round(raw), HALF - 1); // cap outliers at ceiling
                   const pos = d.net >= 0;
                   return (
                     <div
