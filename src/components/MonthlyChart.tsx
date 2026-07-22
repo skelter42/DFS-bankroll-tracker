@@ -5,8 +5,11 @@ interface Month {
   net: number;
 }
 
-const HALF  = 76; // px each direction from zero line
-const Y_W   = 42; // px for Y-axis label column
+const HALF    = 120;  // px each direction from zero line
+const Y_W     = 46;   // px for Y-axis label column
+const MIN_COL = 32;   // minimum px per bar column
+
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function niceMax(v: number): number {
   if (v <= 0) return 10;
@@ -40,9 +43,10 @@ export function MonthlyChart({ data }: { data: Month[] }) {
   const maxAbs = Math.max(...data.map(d => Math.abs(d.net)), 1);
   const yMax   = niceMax(maxAbs);
   const mid    = yMax / 2;
-
-  // ticks above zero line (mirrored below)
   const ticks  = [mid, yMax];
+
+  // Show at most ~14 month labels; always show January (year boundary)
+  const step = Math.max(1, Math.ceil(data.length / 14));
 
   return (
     <div style={{
@@ -54,12 +58,12 @@ export function MonthlyChart({ data }: { data: Month[] }) {
       </div>
 
       <div style={{ overflowX: 'auto' }}>
-        <div style={{ minWidth: `${Y_W + data.length * 22}px` }}>
+        <div style={{ minWidth: Y_W + data.length * MIN_COL }}>
 
           {/* Chart row: Y-axis + bar area */}
           <div style={{ display: 'flex' }}>
 
-            {/* ── Y-axis labels ──────────────────────── */}
+            {/* ── Y-axis labels ── */}
             <div style={{ width: Y_W, flexShrink: 0, position: 'relative', height: HALF * 2 + 1 }}>
               {ticks.map(t => (
                 <span key={t} className="mono" style={{
@@ -89,22 +93,22 @@ export function MonthlyChart({ data }: { data: Month[] }) {
               ))}
             </div>
 
-            {/* ── Bar area ───────────────────────────── */}
+            {/* ── Bar area ── */}
             <div style={{ flex: 1, position: 'relative', height: HALF * 2 + 1 }}>
 
-              {/* Gridlines (painted first, behind bars) */}
+              {/* Gridlines (behind bars) */}
               {ticks.map(t => (
                 <div key={`g+${t}`} style={{
                   position: 'absolute', left: 0, right: 0,
                   top: HALF - Math.round(t / yMax * HALF),
-                  height: 1, background: T.border, opacity: 0.45,
+                  height: 1, background: T.border, opacity: 0.4,
                 }} />
               ))}
               {ticks.map(t => (
                 <div key={`g-${t}`} style={{
                   position: 'absolute', left: 0, right: 0,
                   top: HALF + Math.round(t / yMax * HALF),
-                  height: 1, background: T.border, opacity: 0.45,
+                  height: 1, background: T.border, opacity: 0.4,
                 }} />
               ))}
 
@@ -114,8 +118,8 @@ export function MonthlyChart({ data }: { data: Month[] }) {
                 height: 1, background: T.border,
               }} />
 
-              {/* Bars (position:relative paints over the gridlines above) */}
-              <div style={{ display: 'flex', gap: 3, height: '100%', position: 'relative' }}>
+              {/* Bars (position:relative renders over gridlines) */}
+              <div style={{ display: 'flex', height: '100%', position: 'relative' }}>
                 {data.map((d) => {
                   const h   = Math.round(Math.abs(d.net) / yMax * HALF);
                   const pos = d.net >= 0;
@@ -123,16 +127,16 @@ export function MonthlyChart({ data }: { data: Month[] }) {
                     <div
                       key={d.month}
                       title={`${d.month}  ${d.net >= 0 ? '+$' : '-$'}${Math.abs(d.net).toFixed(0)}`}
-                      style={{ flex: 1, height: '100%', position: 'relative' }}
+                      style={{ flex: 1, minWidth: MIN_COL, height: '100%', position: 'relative' }}
                     >
                       {d.net !== 0 && (
                         <div style={{
                           position: 'absolute',
                           ...(pos ? { bottom: HALF + 1 } : { top: HALF + 1 }),
-                          left: '10%', width: '80%',
-                          height: Math.max(h, 1),
+                          left: 3, right: 3,
+                          height: Math.max(h, 3),
                           background: pos ? T.gold : T.rust,
-                          opacity: 0.88,
+                          opacity: 0.9,
                           borderRadius: pos ? '2px 2px 0 0' : '0 0 2px 2px',
                         }} />
                       )}
@@ -144,16 +148,29 @@ export function MonthlyChart({ data }: { data: Month[] }) {
           </div>
 
           {/* Month labels */}
-          <div style={{ display: 'flex', gap: 3, marginTop: 6, paddingLeft: Y_W }}>
-            {data.map((d, i) => (
-              <div key={d.month} style={{ flex: 1, textAlign: 'center' }}>
-                {i % Math.ceil(data.length / 12) === 0 && (
-                  <span className="mono" style={{ fontSize: 9, color: T.textMuted }}>
-                    {d.month.slice(-2)}
-                  </span>
-                )}
-              </div>
-            ))}
+          <div style={{ display: 'flex', marginTop: 5, paddingLeft: Y_W }}>
+            {data.map((d, i) => {
+              const mm    = parseInt(d.month.slice(-2), 10) - 1; // 0-indexed
+              const isJan = mm === 0;
+              const show  = isJan || i % step === 0;
+              // January → year marker e.g. '24; others → first letter of month name
+              const text  = isJan
+                ? `'${d.month.slice(0, 2)}`
+                : (MONTH_ABBR[mm]?.slice(0, 1) ?? '');
+              return (
+                <div key={d.month} style={{ flex: 1, minWidth: MIN_COL, textAlign: 'center' }}>
+                  {show && (
+                    <span className="mono" style={{
+                      fontSize: 9,
+                      color: isJan ? T.textPrimary : T.textMuted,
+                      fontWeight: isJan ? 600 : 400,
+                    }}>
+                      {text}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
         </div>
