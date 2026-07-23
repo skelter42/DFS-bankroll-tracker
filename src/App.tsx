@@ -302,23 +302,29 @@ export default function App() {
             </div>
 
             {/* ── Tab nav ─────────────────────────────────── */}
-            <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, marginBottom: 24 }}>
+            <div style={{
+              display: 'flex', gap: 4, marginBottom: 24,
+              background: T.panel, border: `1px solid ${T.border}`,
+              borderRadius: 8, padding: 4,
+            }}>
               {(['overview', 'process'] as const).map(p => (
                 <button
                   key={p}
                   onClick={() => setPage(p)}
                   style={{
-                    background:   'none',
-                    border:       'none',
-                    borderBottom: `2px solid ${page === p ? T.gold : 'transparent'}`,
-                    color:         page === p ? T.textPrimary : T.textMuted,
-                    padding:      '10px 16px',
-                    fontSize:     13,
-                    fontFamily:   'inherit',
-                    cursor:       'pointer',
-                    marginBottom: -1,
-                    transition:   'color 150ms, border-color 150ms',
-                    whiteSpace:   'nowrap',
+                    flex:        1,
+                    background:  page === p ? '#1E2636' : 'none',
+                    border:      page === p ? `1px solid ${T.border}` : '1px solid transparent',
+                    borderRadius: 6,
+                    color:       page === p ? T.textPrimary : T.textMuted,
+                    padding:     '9px 12px',
+                    fontSize:    13,
+                    fontFamily:  'inherit',
+                    cursor:      'pointer',
+                    minHeight:   44,
+                    fontWeight:  page === p ? 600 : 400,
+                    transition:  'background 150ms, color 150ms, border-color 150ms',
+                    whiteSpace:  'nowrap',
                   }}
                 >
                   {p === 'overview' ? 'Overview' : 'Process Audit'}
