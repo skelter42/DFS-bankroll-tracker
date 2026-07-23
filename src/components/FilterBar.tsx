@@ -1,34 +1,32 @@
 import { useState, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { T } from '../constants';
-import type { MaxSize, FeeOption, DateFilter } from '../types';
+import { haptic } from '../lib/haptic';
+import type { DateFilter } from '../types';
+import type { ViewMode, SortKey } from '../lib/process';
 
 interface Props {
+  // sport
   sports: string[];
   sportFilter: string[];
   onSportFilter: (s: string[]) => void;
-  maxSizes: MaxSize[];
-  maxFilter: number[];
-  onMaxFilter: (m: number[]) => void;
-  allFees: FeeOption[];
-  feeFilter: number[];
-  onFeeFilter: (f: number[]) => void;
+  // contest type (replaces maxSizes/maxFilter/allFees/feeFilter)
+  allTypes: { key: string; label: string; count: number }[];
+  typeKeys: string[];
+  onTypeKeys: (k: string[]) => void;
+  // date
   dateFilter: DateFilter;
   onDateFilter: (d: DateFilter) => void;
   customFrom: string;
   customTo: string;
   onCustomFrom: (s: string) => void;
   onCustomTo: (s: string) => void;
-}
-
-function toggle<T>(arr: T[], item: T): T[] {
-  const idx = arr.indexOf(item);
-  return idx >= 0 ? [...arr.slice(0, idx), ...arr.slice(idx + 1)] : [...arr, item];
-}
-
-function toggleFee(arr: number[], fee: number): number[] {
-  const idx = arr.findIndex(f => Math.abs(f - fee) < 0.001);
-  return idx >= 0 ? [...arr.slice(0, idx), ...arr.slice(idx + 1)] : [...arr, fee];
+  // view mode
+  viewMode: ViewMode;
+  onViewMode: (m: ViewMode) => void;
+  // sort
+  sortBy: SortKey;
+  onSortBy: (s: SortKey) => void;
 }
 
 function hexAlpha(hex: string, a: number): string {
@@ -38,10 +36,22 @@ function hexAlpha(hex: string, a: number): string {
 }
 
 const DATE_OPTS: [DateFilter, string][] = [
-  ['all', 'All time'], ['30', 'Last 30d'], ['60', 'Last 60d'], ['90', 'Last 90d'], ['custom', 'Custom range'],
+  ['30', 'Last 30d'],
+  ['60', 'Last 60d'],
+  ['90', 'Last 90d'],
+  ['all', 'All time'],
+  ['custom', 'Custom range'],
 ];
 
-const DATE_LABEL: Record<DateFilter, string> = Object.fromEntries(DATE_OPTS) as Record<DateFilter, string>;
+const DATE_LABEL: Record<DateFilter, string> = {
+  '30': 'Last 30d', '60': 'Last 60d', '90': 'Last 90d', all: 'All time', custom: 'Custom',
+};
+
+const SORT_OPTS: [SortKey, string][] = [
+  ['rate-desc', 'Rate ↓'],
+  ['rate-asc',  'Rate ↑'],
+  ['entries',   'Most entries'],
+];
 
 const dateInputStyle: CSSProperties = {
   background:   T.panel,
@@ -111,6 +121,7 @@ function Pill({
           whiteSpace:   'nowrap',
           userSelect:   'none',
           minHeight:    44,
+          fontFamily:   'inherit',
         }}
       >
         {label}
@@ -210,29 +221,33 @@ function DropItem({
 
 export function FilterBar({
   sports, sportFilter, onSportFilter,
-  maxSizes, maxFilter, onMaxFilter,
-  allFees, feeFilter, onFeeFilter,
+  allTypes, typeKeys, onTypeKeys,
   dateFilter, onDateFilter,
   customFrom, customTo, onCustomFrom, onCustomTo,
+  viewMode, onViewMode,
+  sortBy, onSortBy,
 }: Props) {
   const [open, setOpen] = useState<string | null>(null);
 
   const toggleOpen = (key: string) => setOpen(p => p === key ? null : key);
   const close = () => setOpen(null);
 
-  const hasFilters = sportFilter.length > 0 || maxFilter.length > 0 || feeFilter.length > 0 || dateFilter !== 'all';
+  const hasFilters =
+    sportFilter.length > 0 ||
+    typeKeys.length > 0 ||
+    dateFilter !== '30' ||
+    sortBy !== 'rate-desc' ||
+    viewMode !== 'type';
 
   const sportLabel = sportFilter.length === 0 ? 'Sport'
     : sportFilter.length === 1 ? sportFilter[0]
     : `Sport · ${sportFilter.length}`;
 
-  const sizeLabel = maxFilter.length === 0 ? 'Contest Size'
-    : maxFilter.length === 1 ? `${maxFilter[0]}-max`
-    : `Size · ${maxFilter.length}`;
+  const typePillLabel = typeKeys.length === 0 ? 'Contest Type'
+    : typeKeys.length === 1 ? '1 type'
+    : `${typeKeys.length} types`;
 
-  const feeLabel = feeFilter.length === 0 ? 'Entry Fee'
-    : feeFilter.length === 1 ? `$${feeFilter[0].toFixed(2)}`
-    : `Fee · ${feeFilter.length}`;
+  const sortLabel = SORT_OPTS.find(s => s[0] === sortBy)?.[1] ?? 'Sort';
 
   return (
     <div style={{ marginBottom: 28 }}>
@@ -250,41 +265,11 @@ export function FilterBar({
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
 
-        {sports.length > 1 && (
-          <Pill label={sportLabel} active={sportFilter.length > 0} isOpen={open === 'sport'} onToggle={() => toggleOpen('sport')}>
-            <DropItem label="All sports" checked={sportFilter.length === 0} onClick={() => onSportFilter([])} />
-            {divider}
-            {sports.map(s => (
-              <DropItem key={s} label={s} checked={sportFilter.includes(s)}
-                onClick={() => onSportFilter(toggle(sportFilter, s))} />
-            ))}
-          </Pill>
-        )}
-
-        <Pill label={sizeLabel} active={maxFilter.length > 0} isOpen={open === 'size'} onToggle={() => toggleOpen('size')}>
-          <DropItem label="All sizes" checked={maxFilter.length === 0} onClick={() => onMaxFilter([])} />
-          {divider}
-          {maxSizes.map(({ size, count }) => (
-            <DropItem key={size} label={`${size}-max`} count={count}
-              checked={maxFilter.includes(size)}
-              onClick={() => onMaxFilter(toggle(maxFilter, size))} />
-          ))}
-        </Pill>
-
-        <Pill label={feeLabel} active={feeFilter.length > 0} isOpen={open === 'fee'} onToggle={() => toggleOpen('fee')}>
-          <DropItem label="All fees" checked={feeFilter.length === 0} onClick={() => onFeeFilter([])} />
-          {divider}
-          {allFees.map(({ fee, count }) => (
-            <DropItem key={fee} label={`$${fee.toFixed(2)}`} count={count} mono
-              checked={feeFilter.some(f => Math.abs(f - fee) < 0.001)}
-              onClick={() => onFeeFilter(toggleFee(feeFilter, fee))} />
-          ))}
-        </Pill>
-
+        {/* 1. Date pill */}
         <Pill
-          label={DATE_LABEL[dateFilter]} active={dateFilter !== 'all'}
-          isOpen={open === 'date'} onToggle={() => toggleOpen('date')}
-          accent={T.blue} align="right"
+          label={DATE_LABEL[dateFilter]} active={dateFilter !== '30'}
+          isOpen={open === 'date'} onToggle={() => { haptic(5); toggleOpen('date'); }}
+          accent={T.blue}
         >
           {DATE_OPTS.map(([key, label]) => (
             <DropItem key={key} label={label} checked={dateFilter === key} radio
@@ -292,13 +277,74 @@ export function FilterBar({
           ))}
         </Pill>
 
+        {/* 2. Sport pill */}
+        {sports.length > 1 && (
+          <Pill label={sportLabel} active={sportFilter.length > 0} isOpen={open === 'sport'} onToggle={() => { haptic(5); toggleOpen('sport'); }}>
+            <DropItem label="All sports" checked={sportFilter.length === 0} onClick={() => { onSportFilter([]); close(); }} />
+            {divider}
+            {sports.map(s => (
+              <DropItem key={s} label={s} checked={sportFilter.includes(s)}
+                onClick={() => onSportFilter(sportFilter.includes(s) ? sportFilter.filter(x => x !== s) : [...sportFilter, s])} />
+            ))}
+          </Pill>
+        )}
+
+        {/* 3. Contest Type pill */}
+        <Pill label={typePillLabel} active={typeKeys.length > 0} isOpen={open === 'type'} onToggle={() => { haptic(5); toggleOpen('type'); }}>
+          <DropItem label="All contest types" checked={typeKeys.length === 0} onClick={() => { onTypeKeys([]); close(); }} />
+          {divider}
+          {allTypes.map(t => (
+            <DropItem key={t.key} label={t.label} count={t.count} checked={typeKeys.includes(t.key)}
+              onClick={() => onTypeKeys(typeKeys.includes(t.key) ? typeKeys.filter(x => x !== t.key) : [...typeKeys, t.key])} />
+          ))}
+        </Pill>
+
+        {/* 4. View mode inline toggle */}
+        <div style={{
+          display: 'flex', gap: 2, background: '#0C0F16',
+          border: `1px solid ${T.border}`, borderRadius: 7, padding: 3,
+        }}>
+          {(['type', 'sport'] as ViewMode[]).map(m => (
+            <button key={m} onClick={() => { haptic(6); onViewMode(m); }} style={{
+              background:   viewMode === m ? '#1E2636' : 'none',
+              border:       viewMode === m ? `1px solid ${T.border}` : '1px solid transparent',
+              borderRadius: 5, color: viewMode === m ? T.textPrimary : T.textMuted,
+              padding: '6px 10px', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer',
+              fontWeight: viewMode === m ? 600 : 400, minHeight: 36, whiteSpace: 'nowrap',
+              transition: 'background 130ms, color 130ms',
+            }}>
+              {m === 'type' ? 'By Type' : '× Sport'}
+            </button>
+          ))}
+        </div>
+
+        {/* 5. Sort pill */}
+        <Pill
+          label={sortLabel} active={sortBy !== 'rate-desc'}
+          isOpen={open === 'sort'} onToggle={() => { haptic(5); toggleOpen('sort'); }}
+          accent={T.blue} align="right"
+        >
+          {SORT_OPTS.map(([k, l]) => (
+            <DropItem key={k} label={l} checked={sortBy === k} radio
+              onClick={() => { onSortBy(k); close(); haptic(6); }} />
+          ))}
+        </Pill>
+
+        {/* 6. Reset button */}
         {hasFilters && (
           <button
-            onClick={() => { onSportFilter([]); onMaxFilter([]); onFeeFilter([]); onDateFilter('all'); }}
+            onClick={() => {
+              haptic(8);
+              onSportFilter([]);
+              onTypeKeys([]);
+              onDateFilter('30');
+              onViewMode('type');
+              onSortBy('rate-desc');
+            }}
             style={{
               background: 'none', border: 'none', color: T.textMuted,
               fontSize: 13, cursor: 'pointer', padding: '10px 8px',
-              minHeight: 44, transition: 'color 150ms',
+              minHeight: 44, transition: 'color 150ms', fontFamily: 'inherit',
             }}
             onMouseEnter={e => (e.currentTarget.style.color = T.textPrimary)}
             onMouseLeave={e => (e.currentTarget.style.color = T.textMuted)}

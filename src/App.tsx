@@ -1,48 +1,30 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import Papa from 'papaparse';
 import { X } from 'lucide-react';
-import { BASELINES, NOISE_FLOOR, T } from './constants';
+import { T } from './constants';
 import { parseMoney, extractMax } from './lib/parse';
 import { saveEntries, loadSaved, clearSaved } from './lib/storage';
 import { UploadZone } from './components/UploadZone';
 import { FilterBar } from './components/FilterBar';
-import { OverallCard, SportCard } from './components/StatsCard';
 import { KpiStrip } from './components/KpiStrip';
 import { MonthlyChart } from './components/MonthlyChart';
-import { ProcessPage } from './components/ProcessPage';
-import { haptic } from './lib/haptic';
-import type { Entry, Band, DateFilter } from './types';
-
-function makeBands(entries: Entry[]): Band[] {
-  const n = entries.length;
-  if (n === 0) return [
-    { label: 'Top 1%',  baseline: BASELINES.p1,  actual: 0, hits: 0 },
-    { label: 'Top 10%', baseline: BASELINES.p10, actual: 0, hits: 0 },
-    { label: 'Top 20%', baseline: BASELINES.p20, actual: 0, hits: 0 },
-  ];
-  const hit1  = entries.filter(e => e.pct <= BASELINES.p1).length;
-  const hit10 = entries.filter(e => e.pct <= BASELINES.p10).length;
-  const hit20 = entries.filter(e => e.pct <= BASELINES.p20).length;
-  return [
-    { label: 'Top 1%',  baseline: BASELINES.p1,  actual: hit1  / n, hits: hit1  },
-    { label: 'Top 10%', baseline: BASELINES.p10, actual: hit10 / n, hits: hit10 },
-    { label: 'Top 20%', baseline: BASELINES.p20, actual: hit20 / n, hits: hit20 },
-  ];
-}
+import { ProcessSection } from './components/ProcessPage';
+import type { ViewMode, SortKey } from './lib/process';
+import type { Entry, DateFilter } from './types';
 
 export default function App() {
   const [rows,        setRows]        = useState<Entry[] | null>(null);
   const [fileName,    setFileName]    = useState('');
   const [error,       setError]       = useState('');
   const [sportFilter, setSportFilter] = useState<string[]>([]);
-  const [maxFilter,   setMaxFilter]   = useState<number[]>([]);
-  const [feeFilter,   setFeeFilter]   = useState<number[]>([]);
-  const [dateFilter,  setDateFilter]  = useState<DateFilter>('all');
+  const [typeKeys,    setTypeKeys]    = useState<string[]>([]);
+  const [viewMode,    setViewMode]    = useState<ViewMode>('type');
+  const [sortBy,      setSortBy]      = useState<SortKey>('rate-desc');
+  const [dateFilter,  setDateFilter]  = useState<DateFilter>('30');
   const [customFrom,  setCustomFrom]  = useState('');
   const [customTo,    setCustomTo]    = useState('');
   const [loading,     setLoading]     = useState(true);
   const [parsing,     setParsing]     = useState(false);
-  const [page,        setPage]        = useState<'overview' | 'process'>('overview');
 
   useEffect(() => {
     loadSaved().then(saved => {
@@ -85,8 +67,8 @@ export default function App() {
             return;
           }
           setRows(data);
-          setSportFilter([]); setMaxFilter([]); setFeeFilter([]);
-          setDateFilter('all'); setCustomFrom(''); setCustomTo('');
+          setSportFilter([]); setTypeKeys([]); setViewMode('type'); setSortBy('rate-desc');
+          setDateFilter('30'); setCustomFrom(''); setCustomTo('');
           saveEntries(data, file.name);
           setParsing(false);
         } catch {
@@ -106,25 +88,17 @@ export default function App() {
     return [...s].sort();
   }, [rows]);
 
-  const maxSizes = useMemo(() => {
+  const allTypes = useMemo(() => {
     if (!rows) return [];
-    const counts: Record<number, number> = {};
-    rows.forEach(r => { if (r.maxSize !== null) counts[r.maxSize] = (counts[r.maxSize] ?? 0) + 1; });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([size, count]) => ({ size: parseInt(size, 10), count }));
-  }, [rows]);
-
-  const allFees = useMemo(() => {
-    if (!rows) return [];
-    const counts: Record<string, number> = {};
-    rows.forEach(r => {
-      const key = r.fee.toFixed(2);
-      counts[key] = (counts[key] ?? 0) + 1;
+    const map = new Map<string, { fee: number; maxSize: number | null; count: number }>();
+    rows.forEach(e => {
+      const k = `${e.fee}|${e.maxSize ?? 'null'}`;
+      if (!map.has(k)) map.set(k, { fee: e.fee, maxSize: e.maxSize, count: 0 });
+      map.get(k)!.count++;
     });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([fee, count]) => ({ fee: parseFloat(fee), count }));
+    const fmtFee = (f: number) => { const c = Math.round(f * 100); if (c === 0) return 'Free'; if (c < 100) return `${c}¢`; if (c % 100 === 0) return `$${c / 100}`; return `$${f.toFixed(2)}`; };
+    const fmtSize = (m: number | null) => m === null ? '?-max' : m === 1 ? 'single' : `${m}-max`;
+    return [...map.entries()].map(([key, v]) => ({ key, label: `${fmtFee(v.fee)} · ${fmtSize(v.maxSize)}`, count: v.count })).sort((a, b) => b.count - a.count);
   }, [rows]);
 
   const maxDate = useMemo((): Date | null => {
@@ -138,8 +112,10 @@ export default function App() {
     if (!rows) return [];
     let out = [...rows];
     if (sportFilter.length > 0) out = out.filter(r => sportFilter.includes(r.sport));
-    if (maxFilter.length > 0) out = out.filter(r => r.maxSize !== null && maxFilter.includes(r.maxSize));
-    if (feeFilter.length > 0) out = out.filter(r => feeFilter.some(f => Math.abs(r.fee - f) < 0.001));
+    if (typeKeys.length > 0) {
+      const ks = new Set(typeKeys);
+      out = out.filter(r => ks.has(`${r.fee}|${r.maxSize ?? 'null'}`));
+    }
     if (dateFilter === 'custom') {
       if (customFrom) out = out.filter(r => r.date && r.date >= new Date(customFrom));
       if (customTo)   out = out.filter(r => r.date && r.date <= new Date(customTo + 'T23:59:59'));
@@ -152,39 +128,7 @@ export default function App() {
       }
     }
     return out;
-  }, [rows, sportFilter, maxFilter, feeFilter, dateFilter, maxDate, customFrom, customTo]);
-
-  const bySport = useMemo(() => {
-    const groups: Record<string, Entry[]> = {};
-    filtered.forEach(r => { (groups[r.sport] ??= []).push(r); });
-    return Object.entries(groups)
-      .map(([sport, entries]) => {
-        const fees     = entries.reduce((s, e) => s + e.fee, 0);
-        const winnings = entries.reduce((s, e) => s + e.winnings, 0);
-        return {
-          sport,
-          n:        entries.length,
-          bands:    makeBands(entries),
-          roi:      fees > 0 ? (winnings - fees) / fees : 0,
-          fees,
-          winnings,
-        };
-      })
-      .sort((a, b) => b.n - a.n);
-  }, [filtered]);
-
-  const overall = useMemo(() => {
-    if (filtered.length === 0) return null;
-    const fees     = filtered.reduce((s, e) => s + e.fee, 0);
-    const winnings = filtered.reduce((s, e) => s + e.winnings, 0);
-    return {
-      n:        filtered.length,
-      bands:    makeBands(filtered),
-      roi:      fees > 0 ? (winnings - fees) / fees : 0,
-      fees,
-      winnings,
-    };
-  }, [filtered]);
+  }, [rows, sportFilter, typeKeys, dateFilter, maxDate, customFrom, customTo]);
 
   const kpis = useMemo(() => {
     if (!rows) return null;
@@ -211,8 +155,8 @@ export default function App() {
 
   const reset = () => {
     setRows(null); setFileName(''); setError('');
-    setSportFilter([]); setMaxFilter([]); setFeeFilter([]);
-    setDateFilter('all'); setCustomFrom(''); setCustomTo('');
+    setSportFilter([]); setTypeKeys([]); setViewMode('type'); setSortBy('rate-desc');
+    setDateFilter('30'); setCustomFrom(''); setCustomTo('');
     clearSaved();
   };
 
@@ -302,39 +246,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* ── Tab nav ─────────────────────────────────── */}
-            <div style={{
-              display: 'flex', gap: 4, marginBottom: 24,
-              background: T.panel, border: `1px solid ${T.border}`,
-              borderRadius: 8, padding: 4,
-            }}>
-              {(['overview', 'process'] as const).map(p => (
-                <button
-                  key={p}
-                  onClick={() => { haptic(10); setPage(p); }}
-                  style={{
-                    flex:        1,
-                    background:  page === p ? '#1E2636' : 'none',
-                    border:      page === p ? `1px solid ${T.border}` : '1px solid transparent',
-                    borderRadius: 6,
-                    color:       page === p ? T.textPrimary : T.textMuted,
-                    padding:     '9px 12px',
-                    fontSize:    13,
-                    fontFamily:  'inherit',
-                    cursor:      'pointer',
-                    minHeight:   44,
-                    fontWeight:  page === p ? 600 : 400,
-                    transition:  'background 150ms, color 150ms, border-color 150ms',
-                    whiteSpace:  'nowrap',
-                  }}
-                >
-                  {p === 'overview' ? 'Overview' : 'Process Audit'}
-                </button>
-              ))}
-            </div>
-
-            {/* ── Overview tab ─────────────────────────────── */}
-            {page === 'overview' && <>
             {kpis && <KpiStrip kpis={kpis} />}
             <MonthlyChart data={monthlyPnl} />
 
@@ -342,18 +253,19 @@ export default function App() {
               sports={sports}
               sportFilter={sportFilter}
               onSportFilter={setSportFilter}
-              maxSizes={maxSizes}
-              maxFilter={maxFilter}
-              onMaxFilter={setMaxFilter}
-              allFees={allFees}
-              feeFilter={feeFilter}
-              onFeeFilter={setFeeFilter}
+              allTypes={allTypes}
+              typeKeys={typeKeys}
+              onTypeKeys={setTypeKeys}
               dateFilter={dateFilter}
               onDateFilter={setDateFilter}
               customFrom={customFrom}
               customTo={customTo}
               onCustomFrom={setCustomFrom}
               onCustomTo={setCustomTo}
+              viewMode={viewMode}
+              onViewMode={setViewMode}
+              sortBy={sortBy}
+              onSortBy={setSortBy}
             />
 
             {filtered.length === 0 && (
@@ -362,32 +274,19 @@ export default function App() {
               </div>
             )}
 
-            {overall && (
+            {filtered.length > 0 && (
               <>
-                <OverallCard stat={overall} />
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {bySport.map(s => <SportCard key={s.sport} stat={s} />)}
-                </div>
-
-                <div style={{
-                  marginTop: 24, fontSize: 12, color: T.textMuted, lineHeight: 1.6,
-                  borderTop: `1px solid ${T.border}`, paddingTop: 16,
-                }}>
-                  <strong style={{ color: T.textPrimary }}>Reading this:</strong> the gold/rust
-                  marker shows your actual finish rate against the no-edge baseline for that band
-                  (the slate line). Gold = beating the field, rust = under it. Bands flagged{' '}
-                  <span style={{ color: T.textMuted }}>low n</span> have fewer than {NOISE_FLOOR}{' '}
-                  hits — treat as noise, not signal. ROI is rake-adjusted: your actual return vs.
-                  entry fees paid, separate from the percentile bands above.
-                </div>
+                <div style={{ height: 1, background: T.border, margin: '24px 0' }} />
+                <ProcessSection
+                  filtered={filtered}
+                  sportFilter={sportFilter}
+                  typeKeys={typeKeys}
+                  allTypes={allTypes}
+                  viewMode={viewMode}
+                  sortBy={sortBy}
+                />
               </>
             )}
-            </>}
-
-            {/* ── Process Audit tab ────────────────────────── */}
-            {page === 'process' && <ProcessPage rows={rows} />}
-
           </div>
         )}
       </div>
