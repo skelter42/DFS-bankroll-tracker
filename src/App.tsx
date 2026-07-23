@@ -9,6 +9,7 @@ import { FilterBar } from './components/FilterBar';
 import { OverallCard, SportCard } from './components/StatsCard';
 import { KpiStrip } from './components/KpiStrip';
 import { MonthlyChart } from './components/MonthlyChart';
+import { ProcessPage } from './components/ProcessPage';
 import type { Entry, Band, DateFilter } from './types';
 
 function makeBands(entries: Entry[]): Band[] {
@@ -40,6 +41,7 @@ export default function App() {
   const [customTo,    setCustomTo]    = useState('');
   const [loading,     setLoading]     = useState(true);
   const [parsing,     setParsing]     = useState(false);
+  const [page,        setPage]        = useState<'overview' | 'process'>('overview');
 
   useEffect(() => {
     loadSaved().then(saved => {
@@ -299,6 +301,33 @@ export default function App() {
               </button>
             </div>
 
+            {/* ── Tab nav ─────────────────────────────────── */}
+            <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, marginBottom: 24 }}>
+              {(['overview', 'process'] as const).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  style={{
+                    background:   'none',
+                    border:       'none',
+                    borderBottom: `2px solid ${page === p ? T.gold : 'transparent'}`,
+                    color:         page === p ? T.textPrimary : T.textMuted,
+                    padding:      '10px 16px',
+                    fontSize:     13,
+                    fontFamily:   'inherit',
+                    cursor:       'pointer',
+                    marginBottom: -1,
+                    transition:   'color 150ms, border-color 150ms',
+                    whiteSpace:   'nowrap',
+                  }}
+                >
+                  {p === 'overview' ? 'Overview' : 'Process Audit'}
+                </button>
+              ))}
+            </div>
+
+            {/* ── Overview tab ─────────────────────────────── */}
+            {page === 'overview' && <>
             {kpis && <KpiStrip kpis={kpis} />}
             <MonthlyChart data={monthlyPnl} />
 
@@ -347,6 +376,11 @@ export default function App() {
                 </div>
               </>
             )}
+            </>}
+
+            {/* ── Process Audit tab ────────────────────────── */}
+            {page === 'process' && <ProcessPage rows={rows} />}
+
           </div>
         )}
       </div>
