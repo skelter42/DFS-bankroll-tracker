@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { T } from '../constants';
 import { haptic } from '../lib/haptic';
 import { buildContestGroups, CASH_KEEP, CASH_WATCH } from '../lib/process';
-import type { ContestGroup, SportRow, Signal, ViewMode } from '../lib/process';
+import type { ContestGroup, SportRow, Signal, ViewMode, SortKey } from '../lib/process';
 import type { Entry, DateFilter } from '../types';
 
 // ── Signal palette ────────────────────────────────────
@@ -17,7 +17,6 @@ const SIG: Record<Signal, { label: string; color: string; bg: string; border: st
 
 // ── Sort options ──────────────────────────────────────
 
-type SortKey = 'rate-desc' | 'rate-asc' | 'entries';
 const SORT_OPTS: [SortKey, string][] = [
   ['rate-desc', 'Rate: High → Low'],
   ['rate-asc',  'Rate: Low → High'],
@@ -316,6 +315,96 @@ function ContestCard({ g, index }: { g: ContestGroup; index: number }) {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Stateless section (used in unified single-page layout) ───────────────────
+
+interface ProcessSectionProps {
+  filtered: Entry[];
+  sportFilter: string[];
+  typeKeys: string[];
+  allTypes: { key: string; label: string }[];
+  viewMode: ViewMode;
+  sortBy: SortKey;
+}
+
+export function ProcessSection({ filtered, sportFilter, typeKeys, allTypes, viewMode, sortBy }: ProcessSectionProps) {
+  const groups = useMemo(() => {
+    const gs = buildContestGroups(filtered, viewMode);
+    return [...gs].sort((a, b) => {
+      if (sortBy === 'rate-desc') return b.cashRate - a.cashRate;
+      if (sortBy === 'rate-asc')  return a.cashRate - b.cashRate;
+      return b.n - a.n;
+    });
+  }, [filtered, viewMode, sortBy]);
+
+  const removes = groups.filter(g => g.signal === 'remove');
+  const watches = groups.filter(g => g.signal === 'watch');
+  const keeps   = groups.filter(g => g.signal === 'keep');
+  const lowN    = groups.filter(g => g.signal === 'low-n');
+
+  return (
+    <div>
+      <style>{`
+        @keyframes cardIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; } to { opacity: 1; }
+        }
+      `}</style>
+
+      <div style={{ marginBottom: 16 }}>
+        <div className="display" style={{ fontSize: 18, fontWeight: 700, color: T.textPrimary, marginBottom: 3 }}>
+          Process Audit
+        </div>
+        <div style={{ fontSize: 13, color: T.textMuted }}>
+          Finish rates by contest type.
+        </div>
+      </div>
+
+      <InsightBanner filtered={filtered} sportFilter={sportFilter} typeKeys={typeKeys} allTypes={allTypes} />
+
+      {groups.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+          {removes.length > 0 && <span style={{ padding: '4px 11px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: SIG.remove.bg, border: `1px solid ${SIG.remove.border}`, color: SIG.remove.color }}>{removes.length} remove</span>}
+          {watches.length > 0 && <span style={{ padding: '4px 11px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: SIG.watch.bg,  border: `1px solid ${SIG.watch.border}`,  color: SIG.watch.color  }}>{watches.length} watch</span>}
+          {keeps.length > 0   && <span style={{ padding: '4px 11px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: SIG.keep.bg,   border: `1px solid ${SIG.keep.border}`,   color: SIG.keep.color   }}>{keeps.length} on track</span>}
+          {lowN.length > 0    && <span style={{ padding: '4px 11px', borderRadius: 20, fontSize: 12, background: SIG['low-n'].bg, border: `1px solid ${SIG['low-n'].border}`, color: SIG['low-n'].color }}>{lowN.length} low data</span>}
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: T.textMuted, alignSelf: 'center' }}>
+            {filtered.length.toLocaleString()} entries
+          </span>
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <div style={{ color: T.textMuted, fontSize: 14, padding: '32px 0', textAlign: 'center' }}>
+          No entries match the current filters.
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(288px, 1fr))',
+          gap: 12,
+        }}>
+          {groups.map((g, i) => <ContestCard key={g.key} g={g} index={i} />)}
+        </div>
+      )}
+
+      <div style={{
+        marginTop: 28, fontSize: 12, color: T.textMuted, lineHeight: 1.7,
+        borderTop: `1px solid ${T.border}`, paddingTop: 16,
+      }}>
+        <strong style={{ color: T.textPrimary }}>Signals: </strong>
+        <span style={{ color: SIG.keep.color }}>Keep</span> ≥17% ·{' '}
+        <span style={{ color: SIG.watch.color }}>Watch</span> 10–17% ·{' '}
+        <span style={{ color: SIG.remove.color }}>Remove</span> &lt;10% — needs 30+ entries.
+        {' '}Use <strong style={{ color: T.textPrimary }}>× Sport</strong> to split each type by sport — so you can keep $3 single MLB while cutting $3 single NFL.
+        {' '}Avg rank is finish percentile (lower = better).
       </div>
     </div>
   );

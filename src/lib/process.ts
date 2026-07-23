@@ -2,6 +2,7 @@ import type { Entry } from '../types';
 
 export type Signal   = 'keep' | 'watch' | 'remove' | 'low-n';
 export type ViewMode = 'type' | 'sport';
+export type SortKey  = 'rate-desc' | 'rate-asc' | 'entries';
 
 export const MIN_N      = 30;
 export const CASH_KEEP  = 0.17;
