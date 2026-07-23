@@ -10,6 +10,7 @@ import { OverallCard, SportCard } from './components/StatsCard';
 import { KpiStrip } from './components/KpiStrip';
 import { MonthlyChart } from './components/MonthlyChart';
 import { ProcessPage } from './components/ProcessPage';
+import { haptic } from './lib/haptic';
 import type { Entry, Band, DateFilter } from './types';
 
 function makeBands(entries: Entry[]): Band[] {
@@ -310,7 +311,7 @@ export default function App() {
               {(['overview', 'process'] as const).map(p => (
                 <button
                   key={p}
-                  onClick={() => setPage(p)}
+                  onClick={() => { haptic(10); setPage(p); }}
                   style={{
                     flex:        1,
                     background:  page === p ? '#1E2636' : 'none',
