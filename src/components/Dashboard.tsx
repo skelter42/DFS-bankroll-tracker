@@ -190,18 +190,22 @@ function SportCard({ s, index }: { s: SportSummary; index: number }) {
             </span>
           </div>
 
-          {/* Entry type breakdown */}
-          {s.entryTypes.length > 1 && (
-            <>
-              <div style={{ height: 1, background: T.border, margin: '12px -14px 10px' }} />
-              <div style={{ fontSize: 9, color: T.textMuted, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6 }}>
-                By entry type
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {s.entryTypes.map(et => <EntryTypeRow key={et.key} et={et} />)}
-              </div>
-            </>
-          )}
+          {/* Entry type breakdown — only types with enough data */}
+          {(() => {
+            const types = s.entryTypes.filter(et => et.signal !== 'low-n');
+            if (types.length < 2) return null;
+            return (
+              <>
+                <div style={{ height: 1, background: T.border, margin: '12px -14px 10px' }} />
+                <div style={{ fontSize: 9, color: T.textMuted, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  By entry type
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {types.map(et => <EntryTypeRow key={et.key} et={et} />)}
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>

@@ -128,7 +128,7 @@ export default function App() {
   const monthlyPnl = useMemo(() => {
     if (!rows) return [];
     const byMonth: Record<string, { fees: number; winnings: number }> = {};
-    filtered.forEach(r => {
+    rows.forEach(r => {
       if (!r.date) return;
       const m = r.date.toISOString().slice(0, 7);
       if (!byMonth[m]) byMonth[m] = { fees: 0, winnings: 0 };
@@ -138,7 +138,7 @@ export default function App() {
     return Object.entries(byMonth)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, v]) => ({ month: month.slice(2), net: v.winnings - v.fees }));
-  }, [rows, filtered]);
+  }, [rows]);
 
   const reset = () => {
     setRows(null); setFileName(''); setError('');
