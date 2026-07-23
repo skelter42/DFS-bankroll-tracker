@@ -122,3 +122,98 @@ export function buildContestGroups(entries: Entry[], mode: ViewMode = 'type'): C
 
   return groups;
 }
+
+// ── Sport summaries (finish-rate breakdown) ───────────────
+
+export interface FinishDist {
+  top20: number;  // rate of entries finishing in top 20% of contest
+  top10: number;
+  top1:  number;
+}
+
+export interface EntryTypeSummary {
+  key:      string;
+  label:    string;
+  n:        number;
+  cashes:   number;
+  cashRate: number;
+  avgPct:   number;
+  net:      number;
+  roi:      number;
+  signal:   Signal;
+  dist:     FinishDist;
+}
+
+export interface SportSummary {
+  sport:      string;
+  n:          number;
+  cashes:     number;
+  cashRate:   number;
+  avgPct:     number;
+  net:        number;
+  roi:        number;
+  signal:     Signal;
+  dist:       FinishDist;
+  entryTypes: EntryTypeSummary[];
+}
+
+function calcDist(es: Entry[]): FinishDist {
+  const n = es.length;
+  if (n === 0) return { top20: 0, top10: 0, top1: 0 };
+  return {
+    top20: es.filter(e => e.pct <= 0.20).length / n,
+    top10: es.filter(e => e.pct <= 0.10).length / n,
+    top1:  es.filter(e => e.pct <= 0.01).length / n,
+  };
+}
+
+export function buildSportSummaries(entries: Entry[]): SportSummary[] {
+  const sportMap = new Map<string, Entry[]>();
+  for (const e of entries) {
+    if (!sportMap.has(e.sport)) sportMap.set(e.sport, []);
+    sportMap.get(e.sport)!.push(e);
+  }
+
+  const summaries: SportSummary[] = [];
+
+  for (const [sport, es] of sportMap) {
+    const s    = calcStats(es);
+    const dist = calcDist(es);
+
+    const typeMap = new Map<string, Entry[]>();
+    for (const e of es) {
+      const key = `${e.fee}|${e.maxSize ?? 'null'}`;
+      if (!typeMap.has(key)) typeMap.set(key, []);
+      typeMap.get(key)!.push(e);
+    }
+
+    const entryTypes: EntryTypeSummary[] = [];
+    for (const [key, tes] of typeMap) {
+      const ts = calcStats(tes);
+      entryTypes.push({
+        key,
+        label:  `${fmtFee(tes[0].fee)} · ${fmtSize(tes[0].maxSize)}`,
+        ...ts,
+        signal: toSignal(ts.n, ts.cashRate),
+        dist:   calcDist(tes),
+      });
+    }
+    entryTypes.sort((a, b) => b.n - a.n);
+
+    summaries.push({
+      sport,
+      ...s,
+      signal: toSignal(s.n, s.cashRate),
+      dist,
+      entryTypes,
+    });
+  }
+
+  const ORDER: Signal[] = ['remove', 'watch', 'keep', 'low-n'];
+  summaries.sort((a, b) => {
+    const d = ORDER.indexOf(a.signal) - ORDER.indexOf(b.signal);
+    return d !== 0 ? d : b.n - a.n;
+  });
+
+  return summaries;
+}

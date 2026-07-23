@@ -8,8 +8,7 @@ import { UploadZone } from './components/UploadZone';
 import { FilterBar } from './components/FilterBar';
 import { KpiStrip } from './components/KpiStrip';
 import { MonthlyChart } from './components/MonthlyChart';
-import { ProcessSection } from './components/ProcessPage';
-import type { ViewMode, SortKey } from './lib/process';
+import { DashboardSection } from './components/Dashboard';
 import type { Entry, DateFilter } from './types';
 
 export default function App() {
@@ -17,9 +16,6 @@ export default function App() {
   const [fileName,    setFileName]    = useState('');
   const [error,       setError]       = useState('');
   const [sportFilter, setSportFilter] = useState<string[]>([]);
-  const [typeKeys,    setTypeKeys]    = useState<string[]>([]);
-  const [viewMode,    setViewMode]    = useState<ViewMode>('type');
-  const [sortBy,      setSortBy]      = useState<SortKey>('rate-desc');
   const [dateFilter,  setDateFilter]  = useState<DateFilter>('30');
   const [customFrom,  setCustomFrom]  = useState('');
   const [customTo,    setCustomTo]    = useState('');
@@ -67,7 +63,7 @@ export default function App() {
             return;
           }
           setRows(data);
-          setSportFilter([]); setTypeKeys([]); setViewMode('type'); setSortBy('rate-desc');
+          setSportFilter([]);
           setDateFilter('30'); setCustomFrom(''); setCustomTo('');
           saveEntries(data, file.name);
           setParsing(false);
@@ -88,19 +84,6 @@ export default function App() {
     return [...s].sort();
   }, [rows]);
 
-  const allTypes = useMemo(() => {
-    if (!rows) return [];
-    const map = new Map<string, { fee: number; maxSize: number | null; count: number }>();
-    rows.forEach(e => {
-      const k = `${e.fee}|${e.maxSize ?? 'null'}`;
-      if (!map.has(k)) map.set(k, { fee: e.fee, maxSize: e.maxSize, count: 0 });
-      map.get(k)!.count++;
-    });
-    const fmtFee = (f: number) => { const c = Math.round(f * 100); if (c === 0) return 'Free'; if (c < 100) return `${c}¢`; if (c % 100 === 0) return `$${c / 100}`; return `$${f.toFixed(2)}`; };
-    const fmtSize = (m: number | null) => m === null ? '?-max' : m === 1 ? 'single' : `${m}-max`;
-    return [...map.entries()].map(([key, v]) => ({ key, label: `${fmtFee(v.fee)} · ${fmtSize(v.maxSize)}`, count: v.count })).sort((a, b) => b.count - a.count);
-  }, [rows]);
-
   const maxDate = useMemo((): Date | null => {
     if (!rows) return null;
     let max: Date | null = null;
@@ -112,10 +95,6 @@ export default function App() {
     if (!rows) return [];
     let out = [...rows];
     if (sportFilter.length > 0) out = out.filter(r => sportFilter.includes(r.sport));
-    if (typeKeys.length > 0) {
-      const ks = new Set(typeKeys);
-      out = out.filter(r => ks.has(`${r.fee}|${r.maxSize ?? 'null'}`));
-    }
     if (dateFilter === 'custom') {
       if (customFrom) out = out.filter(r => r.date && r.date >= new Date(customFrom));
       if (customTo)   out = out.filter(r => r.date && r.date <= new Date(customTo + 'T23:59:59'));
@@ -128,14 +107,22 @@ export default function App() {
       }
     }
     return out;
-  }, [rows, sportFilter, typeKeys, dateFilter, maxDate, customFrom, customTo]);
+  }, [rows, sportFilter, dateFilter, maxDate, customFrom, customTo]);
 
   const kpis = useMemo(() => {
     if (!rows) return null;
     const fees     = filtered.reduce((s, r) => s + r.fee, 0);
     const winnings = filtered.reduce((s, r) => s + r.winnings, 0);
     const net      = winnings - fees;
-    return { entries: filtered.length, fees, winnings, net, roi: fees > 0 ? net / fees : 0 };
+    const cashes   = filtered.filter(r => r.winnings > 0).length;
+    return {
+      entries:  filtered.length,
+      fees,
+      winnings,
+      net,
+      roi:      fees > 0 ? net / fees : 0,
+      cashRate: filtered.length > 0 ? cashes / filtered.length : 0,
+    };
   }, [rows, filtered]);
 
   const monthlyPnl = useMemo(() => {
@@ -155,7 +142,7 @@ export default function App() {
 
   const reset = () => {
     setRows(null); setFileName(''); setError('');
-    setSportFilter([]); setTypeKeys([]); setViewMode('type'); setSortBy('rate-desc');
+    setSportFilter([]);
     setDateFilter('30'); setCustomFrom(''); setCustomTo('');
     clearSaved();
   };
@@ -253,40 +240,17 @@ export default function App() {
               sports={sports}
               sportFilter={sportFilter}
               onSportFilter={setSportFilter}
-              allTypes={allTypes}
-              typeKeys={typeKeys}
-              onTypeKeys={setTypeKeys}
               dateFilter={dateFilter}
               onDateFilter={setDateFilter}
               customFrom={customFrom}
               customTo={customTo}
               onCustomFrom={setCustomFrom}
               onCustomTo={setCustomTo}
-              viewMode={viewMode}
-              onViewMode={setViewMode}
-              sortBy={sortBy}
-              onSortBy={setSortBy}
             />
 
-            {filtered.length === 0 && (
-              <div style={{ color: T.textMuted, fontSize: 14, padding: '24px 0' }}>
-                No entries match that combination.
-              </div>
-            )}
+            <div style={{ height: 1, background: T.border, margin: '4px 0 24px' }} />
 
-            {filtered.length > 0 && (
-              <>
-                <div style={{ height: 1, background: T.border, margin: '24px 0' }} />
-                <ProcessSection
-                  filtered={filtered}
-                  sportFilter={sportFilter}
-                  typeKeys={typeKeys}
-                  allTypes={allTypes}
-                  viewMode={viewMode}
-                  sortBy={sortBy}
-                />
-              </>
-            )}
+            <DashboardSection filtered={filtered} />
           </div>
         )}
       </div>
