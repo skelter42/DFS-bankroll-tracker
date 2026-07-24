@@ -15,6 +15,12 @@ const BAR_MAX  = 0.30;
 const BASELINE = (0.20 / BAR_MAX) * 100;  // 66.7% across bar = 20% cash rate mark
 
 function fmtPct(v: number, dec = 1) { return `${(v * 100).toFixed(dec)}%`; }
+
+function finishColor(val: number, baseline: number): string {
+  if (val >= baseline)          return '#3FC480';  // beating expected → green
+  if (val >= baseline * 0.75)   return '#C9A227';  // within 25% below → gold
+  return '#CF4C3F';                                 // well below expected → red
+}
 function fmtNet(n: number) {
   const a = Math.abs(n), s = n >= 0 ? '+$' : '-$';
   return a >= 1000 ? `${s}${(a / 1000).toFixed(1)}k` : `${s}${a.toFixed(0)}`;
@@ -156,16 +162,17 @@ function SportCard({ s, index }: { s: SportSummary; index: number }) {
             padding: '10px 0', marginBottom: 12,
           }}>
             {[
-              { label: 'Top 20%', v: s.dist.top20 },
-              { label: 'Top 10%', v: s.dist.top10 },
-              { label: 'Top 1%',  v: s.dist.top1  },
-            ].map(({ label, v }, i) => (
+              { label: 'Top 20%', v: s.dist.top20, baseline: 0.20 },
+              { label: 'Top 10%', v: s.dist.top10, baseline: 0.10 },
+              { label: 'Top 1%',  v: s.dist.top1,  baseline: 0.01 },
+            ].map(({ label, v, baseline }, i) => (
               <div key={label} style={{
                 textAlign: 'center', padding: '0 4px',
                 borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
               }}>
                 <div className="mono" style={{
-                  fontSize: 15, fontWeight: 700, color: T.textPrimary,
+                  fontSize: 15, fontWeight: 700,
+                  color: finishColor(v, baseline),
                   fontVariantNumeric: 'tabular-nums',
                 }}>
                   {fmtPct(v)}

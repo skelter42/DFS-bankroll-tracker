@@ -16,6 +16,7 @@ export default function App() {
   const [fileName,    setFileName]    = useState('');
   const [error,       setError]       = useState('');
   const [sportFilter, setSportFilter] = useState<string[]>([]);
+  const [typeKeys,    setTypeKeys]    = useState<string[]>([]);
   const [dateFilter,  setDateFilter]  = useState<DateFilter>('30');
   const [customFrom,  setCustomFrom]  = useState('');
   const [customTo,    setCustomTo]    = useState('');
@@ -63,7 +64,7 @@ export default function App() {
             return;
           }
           setRows(data);
-          setSportFilter([]);
+          setSportFilter([]); setTypeKeys([]);
           setDateFilter('30'); setCustomFrom(''); setCustomTo('');
           saveEntries(data, file.name);
           setParsing(false);
@@ -76,6 +77,21 @@ export default function App() {
       error: () => { setError("Couldn't read that file."); setParsing(false); },
     });
   }, []);
+
+  const allTypes = useMemo(() => {
+    if (!rows) return [];
+    const map = new Map<string, { fee: number; maxSize: number | null; count: number }>();
+    rows.forEach(e => {
+      const k = `${e.fee}|${e.maxSize ?? 'null'}`;
+      if (!map.has(k)) map.set(k, { fee: e.fee, maxSize: e.maxSize, count: 0 });
+      map.get(k)!.count++;
+    });
+    const fmtFee  = (f: number) => { const c = Math.round(f * 100); if (c === 0) return 'Free'; if (c < 100) return `${c}¢`; if (c % 100 === 0) return `$${c / 100}`; return `$${f.toFixed(2)}`; };
+    const fmtSize = (m: number | null) => m === null ? '?-max' : m === 1 ? 'single' : `${m}-max`;
+    return [...map.entries()]
+      .map(([key, v]) => ({ key, label: `${fmtFee(v.fee)} · ${fmtSize(v.maxSize)}`, count: v.count }))
+      .sort((a, b) => b.count - a.count);
+  }, [rows]);
 
   const sports = useMemo(() => {
     if (!rows) return [];
@@ -95,6 +111,10 @@ export default function App() {
     if (!rows) return [];
     let out = [...rows];
     if (sportFilter.length > 0) out = out.filter(r => sportFilter.includes(r.sport));
+    if (typeKeys.length > 0) {
+      const ks = new Set(typeKeys);
+      out = out.filter(r => ks.has(`${r.fee}|${r.maxSize ?? 'null'}`));
+    }
     if (dateFilter === 'custom') {
       if (customFrom) out = out.filter(r => r.date && r.date >= new Date(customFrom));
       if (customTo)   out = out.filter(r => r.date && r.date <= new Date(customTo + 'T23:59:59'));
@@ -107,7 +127,7 @@ export default function App() {
       }
     }
     return out;
-  }, [rows, sportFilter, dateFilter, maxDate, customFrom, customTo]);
+  }, [rows, sportFilter, typeKeys, dateFilter, maxDate, customFrom, customTo]);
 
   const kpis = useMemo(() => {
     if (!rows) return null;
@@ -142,7 +162,7 @@ export default function App() {
 
   const reset = () => {
     setRows(null); setFileName(''); setError('');
-    setSportFilter([]);
+    setSportFilter([]); setTypeKeys([]);
     setDateFilter('30'); setCustomFrom(''); setCustomTo('');
     clearSaved();
   };
@@ -240,6 +260,9 @@ export default function App() {
               sports={sports}
               sportFilter={sportFilter}
               onSportFilter={setSportFilter}
+              allTypes={allTypes}
+              typeKeys={typeKeys}
+              onTypeKeys={setTypeKeys}
               dateFilter={dateFilter}
               onDateFilter={setDateFilter}
               customFrom={customFrom}

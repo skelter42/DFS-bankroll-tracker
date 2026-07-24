@@ -8,6 +8,9 @@ interface Props {
   sports: string[];
   sportFilter: string[];
   onSportFilter: (s: string[]) => void;
+  allTypes: { key: string; label: string; count: number }[];
+  typeKeys: string[];
+  onTypeKeys: (k: string[]) => void;
   dateFilter: DateFilter;
   onDateFilter: (d: DateFilter) => void;
   customFrom: string;
@@ -35,17 +38,9 @@ const DATE_LABEL: Record<DateFilter, string> = {
 };
 
 const dateInputStyle: CSSProperties = {
-  background:   T.panel,
-  border:       `1px solid ${T.border}`,
-  borderRadius: 5,
-  padding:      '10px 10px',
-  fontSize:     13,
-  color:        T.textPrimary,
-  outline:      'none',
-  colorScheme:  'dark',
-  transition:   'border-color 150ms',
-  flex:         '1',
-  minWidth:     120,
+  background: T.panel, border: `1px solid ${T.border}`, borderRadius: 5,
+  padding: '10px', fontSize: 13, color: T.textPrimary,
+  outline: 'none', colorScheme: 'dark', flex: '1', minWidth: 120,
 };
 
 const divider = <div style={{ height: 1, background: '#2A3040', margin: '4px 0' }} />;
@@ -64,8 +59,8 @@ function Pill({
 
   const handleToggle = () => {
     if (!isOpen && btnRef.current) {
-      const rect      = btnRef.current.getBoundingClientRect();
-      const dropW     = 220;
+      const rect       = btnRef.current.getBoundingClientRect();
+      const dropW      = 230;
       const spaceRight = window.innerWidth - rect.left - 16;
       const spaceLeft  = rect.right - 16;
       setPanelSide(
@@ -107,8 +102,8 @@ function Pill({
           ...(panelSide === 'right' ? { right: 0 } : { left: 0 }),
           background: '#161B26', border: '1px solid #2A3040', borderRadius: 8,
           boxShadow: '0 16px 48px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(255,255,255,0.03)',
-          minWidth: 180, maxWidth: 'min(240px, calc(100vw - 32px))',
-          maxHeight: 280, overflowY: 'auto', zIndex: 10, padding: '5px 0',
+          minWidth: 190, maxWidth: 'min(260px, calc(100vw - 32px))',
+          maxHeight: 300, overflowY: 'auto', zIndex: 10, padding: '5px 0',
         }}>
           {children}
         </div>
@@ -158,6 +153,7 @@ function DropItem({
 
 export function FilterBar({
   sports, sportFilter, onSportFilter,
+  allTypes, typeKeys, onTypeKeys,
   dateFilter, onDateFilter,
   customFrom, customTo, onCustomFrom, onCustomTo,
 }: Props) {
@@ -165,11 +161,15 @@ export function FilterBar({
   const toggleOpen = (key: string) => setOpen(p => p === key ? null : key);
   const close = () => setOpen(null);
 
-  const hasFilters = sportFilter.length > 0 || dateFilter !== '30';
+  const hasFilters = sportFilter.length > 0 || typeKeys.length > 0 || dateFilter !== '30';
 
-  const sportLabel = sportFilter.length === 0   ? 'Sport'
+  const sportLabel = sportFilter.length === 0 ? 'Sport'
     : sportFilter.length === 1 ? sportFilter[0]
     : `${sportFilter.length} sports`;
+
+  const typeLabel = typeKeys.length === 0 ? 'Contest Type'
+    : typeKeys.length === 1 ? (allTypes.find(t => t.key === typeKeys[0])?.label ?? '1 type')
+    : `${typeKeys.length} types`;
 
   return (
     <div style={{ marginBottom: 24 }}>
@@ -214,10 +214,28 @@ export function FilterBar({
           </Pill>
         )}
 
+        {/* Contest Type */}
+        {allTypes.length > 1 && (
+          <Pill
+            label={typeLabel} active={typeKeys.length > 0}
+            isOpen={open === 'type'} onToggle={() => { haptic(5); toggleOpen('type'); }}
+          >
+            <DropItem label="All contest types" checked={typeKeys.length === 0}
+              onClick={() => { onTypeKeys([]); close(); }} />
+            {divider}
+            {allTypes.map(t => (
+              <DropItem key={t.key} label={t.label} count={t.count} checked={typeKeys.includes(t.key)}
+                onClick={() => onTypeKeys(
+                  typeKeys.includes(t.key) ? typeKeys.filter(x => x !== t.key) : [...typeKeys, t.key]
+                )} />
+            ))}
+          </Pill>
+        )}
+
         {/* Reset */}
         {hasFilters && (
           <button
-            onClick={() => { haptic(8); onSportFilter([]); onDateFilter('30'); }}
+            onClick={() => { haptic(8); onSportFilter([]); onTypeKeys([]); onDateFilter('30'); }}
             style={{
               background: 'none', border: 'none', color: T.textMuted,
               fontSize: 13, cursor: 'pointer', padding: '10px 8px',
@@ -232,10 +250,10 @@ export function FilterBar({
       </div>
 
       {dateFilter === 'custom' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, paddingLeft: 2, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           <input type="date" value={customFrom} onChange={e => onCustomFrom(e.target.value)} style={dateInputStyle} />
           <span style={{ color: T.textMuted, fontSize: 12, flexShrink: 0 }}>→</span>
-          <input type="date" value={customTo} onChange={e => onCustomTo(e.target.value)} style={dateInputStyle} />
+          <input type="date" value={customTo}   onChange={e => onCustomTo(e.target.value)}   style={dateInputStyle} />
         </div>
       )}
     </div>
