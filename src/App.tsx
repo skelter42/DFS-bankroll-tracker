@@ -9,6 +9,7 @@ import { FilterBar } from './components/FilterBar';
 import { KpiStrip } from './components/KpiStrip';
 import { MonthlyChart } from './components/MonthlyChart';
 import { DashboardSection } from './components/Dashboard';
+import { DFSAgent } from './components/DFSAgent';
 import type { Entry, DateFilter } from './types';
 
 export default function App() {
@@ -274,6 +275,7 @@ export default function App() {
             <div style={{ height: 1, background: T.border, margin: '4px 0 24px' }} />
 
             <DashboardSection filtered={filtered} />
+            <DFSAgent filtered={filtered} dateFilter={dateFilter} />
           </div>
         )}
       </div>
