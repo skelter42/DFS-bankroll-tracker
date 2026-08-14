@@ -46,6 +46,7 @@ export default function App() {
               if (!r.Sport || isNaN(place) || isNaN(entries) || entries <= 0) return null;
               return {
                 sport:     r.Sport,
+                gameType:  r.Game_Type ?? '',
                 entryName: r.Entry ?? '',
                 date:      r.Contest_Date_EST ? new Date(r.Contest_Date_EST) : null,
                 place,

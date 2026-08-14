@@ -1,5 +1,6 @@
 export interface Entry {
   sport: string;
+  gameType: string;
   entryName: string;
   date: Date | null;
   place: number;
