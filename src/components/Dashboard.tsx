@@ -1,316 +1,242 @@
 import { useMemo } from 'react';
 import { T } from '../constants';
 import {
-  bySport, bySportFormat, byFee, byField, findLeaks, findEdges,
-  buildCore, buildTail, buildForm, FIELDS,
-  MIN_N, ROI_KEEP, ROI_WATCH, T20, T10, T1, T01,
-  fmtNet, fmtRoi, fmtPct, fmtFee,
+  headline, cutList, playList, unknownList, dimensions, blockBands,
+  fmtX, fmtNet, fmtSign, fmtPct, MAX_CI_WIDTH,
 } from '../lib/engine';
-import type { Slice, Signal } from '../lib/engine';
+import type { Slice, Verdict } from '../lib/engine';
 import type { Entry } from '../types';
 
-const SIG: Record<Signal, { c: string; bg: string; bd: string; label: string }> = {
-  keep:    { c: '#3FC480', bg: 'rgba(63,196,128,0.09)',  bd: 'rgba(63,196,128,0.25)', label: 'Keep'   },
-  watch:   { c: '#C9A227', bg: 'rgba(201,162,39,0.09)',  bd: 'rgba(201,162,39,0.26)', label: 'Watch'  },
-  remove:  { c: '#CF4C3F', bg: 'rgba(207,76,63,0.09)',   bd: 'rgba(207,76,63,0.26)',  label: 'Cut'    },
-  'low-n': { c: '#636D7E', bg: 'rgba(99,109,126,0.07)',  bd: 'rgba(99,109,126,0.20)', label: 'Low n'  },
+const C: Record<Verdict, string> = {
+  play: '#3FC480', cut: '#CF4C3F', watch: '#C9A227', unknown: '#636D7E',
+};
+const BG: Record<Verdict, string> = {
+  play:    'rgba(63,196,128,0.08)',
+  cut:     'rgba(207,76,63,0.08)',
+  watch:   'rgba(201,162,39,0.08)',
+  unknown: 'rgba(99,109,126,0.06)',
 };
 
-/** Colour a finish rate against the rate a random player would post. */
-function edgeColor(actual: number, baseline: number): string {
-  const r = actual / baseline;
-  if (r >= 1.15) return '#3FC480';
-  if (r >= 0.95) return '#C9A227';
-  return '#CF4C3F';
-}
-
-function Badge({ signal }: { signal: Signal }) {
-  const s = SIG[signal];
+function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '3px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-      background: s.bg, border: `1px solid ${s.bd}`, color: s.c,
-      letterSpacing: '0.05em', whiteSpace: 'nowrap', flexShrink: 0,
-    }}>
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.c }} />
-      {s.label.toUpperCase()}
-    </span>
-  );
-}
-
-function SectionHead({ title, note }: { title: string; note?: string }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-      gap: 12, flexWrap: 'wrap',
-      paddingBottom: 9, marginBottom: 14, borderBottom: `1px solid ${T.border}`,
-    }}>
-      <span className="display" style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary }}>
-        {title}
-      </span>
-      {note && <span style={{ fontSize: 11, color: T.textMuted }}>{note}</span>}
+    <div style={{ marginBottom: 30 }}>
+      <div style={{
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+        gap: 12, flexWrap: 'wrap', paddingBottom: 8, marginBottom: 12,
+        borderBottom: `1px solid ${T.border}`,
+      }}>
+        <span className="display" style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary }}>{title}</span>
+        {note && <span style={{ fontSize: 11, color: T.textMuted }}>{note}</span>}
+      </div>
+      {children}
     </div>
   );
 }
 
-// ── Leaks: the headline answer to "what do I cut?" ────────
-
-function Leaks({ entries }: { entries: Entry[] }) {
-  const leaks = useMemo(() => findLeaks(entries), [entries]);
-  if (leaks.length === 0) {
-    return (
+/** Confidence interval drawn against the 1.00x baseline. */
+function RateBar({ s }: { s: Slice }) {
+  const MAXX = 2.5;
+  const pos = (v: number) => `${Math.min(Math.max(v, 0), MAXX) / MAXX * 100}%`;
+  const col = C[s.verdict];
+  return (
+    <div style={{ position: 'relative', height: 16, flex: 1, minWidth: 90 }}>
+      <div style={{ position: 'absolute', top: 7, left: 0, right: 0, height: 2, background: 'rgba(255,255,255,0.06)' }} />
       <div style={{
-        background: SIG.keep.bg, border: `1px solid ${SIG.keep.bd}`,
-        borderLeft: `3px solid ${SIG.keep.c}`, borderRadius: '0 8px 8px 0',
-        padding: '14px 18px', marginBottom: 28, fontSize: 13, color: T.textMuted, lineHeight: 1.6,
+        position: 'absolute', top: 6, height: 4, borderRadius: 2, background: col, opacity: 0.75,
+        left: pos(s.lo), width: `calc(${pos(s.hi)} - ${pos(s.lo)})`,
+      }} />
+      <div style={{ position: 'absolute', top: 3, left: pos(s.rate), width: 2, height: 10, background: col }} />
+      {/* the 1.00x baseline */}
+      <div style={{ position: 'absolute', top: 1, left: pos(1), width: 1, height: 14, background: 'rgba(255,255,255,0.4)' }} />
+    </div>
+  );
+}
+
+function Row({ s, showNet = true }: { s: Slice; showNet?: boolean }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+      padding: '9px 12px', background: BG[s.verdict],
+      borderLeft: `2px solid ${C[s.verdict]}`, borderRadius: 4, marginBottom: 3,
+    }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: T.textPrimary, flex: '1 1 120px', minWidth: 100 }}>
+        {s.label}
+      </span>
+      <RateBar s={s} />
+      <span className="mono" style={{
+        fontSize: 13, fontWeight: 700, color: C[s.verdict], width: 46,
+        textAlign: 'right', fontVariantNumeric: 'tabular-nums', flexShrink: 0,
       }}>
-        <strong style={{ color: SIG.keep.c }}>No leaks found.</strong>{' '}
-        Nothing with {MIN_N}+ entries is below {ROI_WATCH}% ROI. Either you're clean or the
-        filter is too narrow to judge.
+        {fmtX(s.rate)}
+      </span>
+      <span className="mono" style={{
+        fontSize: 10, color: T.textMuted, width: 82, textAlign: 'right',
+        flexShrink: 0, fontVariantNumeric: 'tabular-nums',
+      }}>
+        {fmtX(s.lo)}–{fmtX(s.hi)}
+      </span>
+      {showNet && (
+        <span className="mono" style={{
+          fontSize: 11, color: s.net >= 0 ? T.gold : T.rust, width: 54,
+          textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums',
+        }}>
+          {fmtNet(s.net)}
+        </span>
+      )}
+      <span className="mono" style={{ fontSize: 10, color: T.textMuted, width: 48, textAlign: 'right', flexShrink: 0 }}>
+        {s.n.toLocaleString()}n
+      </span>
+    </div>
+  );
+}
+
+// ── Headline verdict ──────────────────────────────────────
+
+function Headline({ es }: { es: Entry[] }) {
+  const h = useMemo(() => headline(es), [es]);
+  const v: Verdict = !h.readable ? 'unknown' : h.lo > 1 ? 'play' : h.hi < 1 ? 'cut' : 'watch';
+  const msg = !h.readable
+    ? `Not enough yet. ${h.needMore.toLocaleString()} more entries before this number means anything.`
+    : h.lo > 1 ? 'Beating the field at the top. The process is working.'
+    : h.hi < 1 ? 'Finishing below random at the top. Something is wrong upstream of contest choice.'
+    : 'Indistinguishable from random. Not broken, not proven.';
+
+  return (
+    <div style={{
+      background: BG[v], border: `1px solid ${C[v]}44`, borderLeft: `3px solid ${C[v]}`,
+      borderRadius: '0 8px 8px 0', padding: '16px 18px', marginBottom: 26,
+    }}>
+      <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textMuted, marginBottom: 8 }}>
+        Top-1% finish rate vs a random player
       </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+        <span className="mono" style={{ fontSize: 34, fontWeight: 700, color: C[v], lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+          {fmtX(h.rate)}
+        </span>
+        <span className="mono" style={{ fontSize: 13, color: T.textMuted }}>
+          95% range {fmtX(h.lo)} – {fmtX(h.hi)}
+        </span>
+      </div>
+      <div style={{ fontSize: 13, color: T.textPrimary, marginBottom: 10, lineHeight: 1.5 }}>{msg}</div>
+      <div style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.7 }}>
+        {h.n.toLocaleString()} entries over {h.contests.toLocaleString()} contests ·{' '}
+        <strong style={{ color: h.net >= 0 ? T.gold : T.rust }}>{fmtNet(h.net)}</strong> at {fmtSign(h.roi)} ROI ·{' '}
+        beating the humans by <strong style={{ color: h.edge >= 0 ? T.gold : T.rust }}>{fmtSign(h.edge)}</strong> before rake
+      </div>
+    </div>
+  );
+}
+
+// ── Sections ──────────────────────────────────────────────
+
+function Cuts({ es }: { es: Entry[] }) {
+  const list = useMemo(() => cutList(es), [es]);
+  if (!list.length) {
+    return (
+      <Section title="Cut" note="confidently below random at the top">
+        <div style={{ fontSize: 13, color: T.textMuted, padding: '10px 12px', background: BG.unknown, borderRadius: 4 }}>
+          Nothing is confidently below a random player. That's not the same as everything being fine —
+          most slices simply don't have the sample to convict.
+        </div>
+      </Section>
     );
   }
-
-  const bleed = leaks.reduce((s, l) => s + l.net, 0);
-  const freed = leaks.reduce((s, l) => s + l.fees, 0);
-
+  const bleed = list.reduce((s, x) => s + x.net, 0);
+  const freed = list.reduce((s, x) => s + x.fees, 0);
   return (
-    <div style={{
-      background: SIG.remove.bg, border: `1px solid ${SIG.remove.bd}`,
-      borderLeft: `3px solid ${SIG.remove.c}`, borderRadius: '0 8px 8px 0',
-      padding: '16px 18px', marginBottom: 28,
-    }}>
-      <div style={{
-        fontSize: 11, fontWeight: 700, color: SIG.remove.c,
-        letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 4,
-      }}>
-        Cut list — ranked by dollars lost
+    <Section title="Cut" note="confidently below random at the top">
+      <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 10, lineHeight: 1.6 }}>
+        These {list.length} finish below a coin-flip player and the interval clears 1.00x.
+        Together: <strong style={{ color: T.rust }}>{fmtNet(bleed)}</strong> on{' '}
+        <strong style={{ color: T.textPrimary }}>${Math.round(freed).toLocaleString()}</strong> of entry fees.
       </div>
-      <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 13, lineHeight: 1.6 }}>
-        These {leaks.length} slices cost you <strong style={{ color: T.textPrimary }}>{fmtNet(bleed)}</strong>{' '}
-        on <strong style={{ color: T.textPrimary }}>${freed.toFixed(0)}</strong> of entry fees.
-        Cutting them frees that bankroll for the formats below.
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {leaks.map((l, i) => (
-          <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-            padding: '9px 0',
-            borderTop: i > 0 ? `1px solid ${T.border}` : 'none',
-          }}>
-            <span style={{
-              width: 18, fontSize: 11, color: SIG.remove.c,
-              fontWeight: 700, flexShrink: 0,
-            }}>
-              {i + 1}
-            </span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: T.textPrimary, flex: 1, minWidth: 130 }}>
-              {l.label}
-            </span>
-            <span className="mono" style={{
-              fontSize: 13, fontWeight: 700, color: SIG.remove.c,
-              fontVariantNumeric: 'tabular-nums', width: 62, textAlign: 'right', flexShrink: 0,
-            }}>
-              {fmtNet(l.net)}
-            </span>
-            <span className="mono" style={{
-              fontSize: 11, color: T.textMuted, width: 96, textAlign: 'right',
-              flexShrink: 0, fontVariantNumeric: 'tabular-nums',
-            }}>
-              {fmtRoi(l.roi)} · {l.n.toLocaleString()}n
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+      {list.map(s => <Row key={s.dim + s.key} s={s} />)}
+    </Section>
   );
 }
 
-// ── Core vs rest: the counterfactual ──────────────────────
-
-function CoreSplit({ entries }: { entries: Entry[] }) {
-  const p = useMemo(() => buildCore(entries), [entries]);
-  if (!p.hasCore) return null;
-
-  const excl = [
-    ...p.excludeFees.map(fmtFee),
-    ...p.excludeFields.map(k => FIELDS.find(f => f.key === k)?.label ?? k),
-  ];
-
-  const Col = ({ label, stats, good }: { label: string; stats: typeof p.core; good: boolean }) => {
-    const c = good ? SIG.keep.c : SIG.remove.c;
+function Plays({ es }: { es: Entry[] }) {
+  const list = useMemo(() => playList(es), [es]);
+  if (!list.length) {
     return (
-      <div style={{
-        flex: 1, minWidth: 150, padding: '13px 15px',
-        background: good ? SIG.keep.bg : SIG.remove.bg,
-        border: `1px solid ${good ? SIG.keep.bd : SIG.remove.bd}`,
-        borderRadius: 7,
-      }}>
-        <div style={{ fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: T.textMuted, marginBottom: 7 }}>
-          {label}
+      <Section title="Play" note="confidently above random at the top">
+        <div style={{ fontSize: 13, color: T.textMuted, padding: '10px 12px', background: BG.unknown, borderRadius: 4 }}>
+          No slice clears 1.00x with confidence yet. Keep volume in the places that are at least breaking even
+          and let the sample build.
         </div>
-        <div className="mono" style={{ fontSize: 23, fontWeight: 700, color: c, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
-          {fmtNet(stats.net)}
-        </div>
-        <div className="mono" style={{ fontSize: 12, color: c, marginTop: 5, fontVariantNumeric: 'tabular-nums' }}>
-          {fmtRoi(stats.roi)} ROI
-        </div>
-        <div style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>
-          {stats.n.toLocaleString()} entries
-        </div>
-      </div>
+      </Section>
     );
-  };
-
+  }
   return (
-    <div style={{ marginBottom: 32 }}>
-      <SectionHead title="Your edge, isolated" note={`Core is ${fmtPct(p.coverage, 0)} of your volume`} />
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 11 }}>
-        <Col label="Core format" stats={p.core} good />
-        <Col label="Everything else" stats={p.rest} good={false} />
-      </div>
-      <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.65 }}>
-        <strong style={{ color: T.textPrimary }}>Core</strong> = {p.combos.join(' · ')}
-        {excl.length > 0 && <>, skipping {excl.join(' and ')}</>}.
-        {p.rest.net < 0 && (
-          <> Everything outside it gave back <strong style={{ color: SIG.remove.c }}>{fmtNet(-p.rest.net)}</strong> of
-          what the core earned.</>
-        )}
-      </div>
-    </div>
+    <Section title="Play" note="confidently above random at the top">
+      {list.map(s => <Row key={s.dim + s.key} s={s} />)}
+    </Section>
   );
 }
 
-// ── Tail report: where the money actually is ──────────────
-
-function Tail({ entries }: { entries: Entry[] }) {
-  const t = useMemo(() => buildTail(entries), [entries]);
-  if (t.overall.n < MIN_N) return null;
-
-  const tiers = [
-    { label: 'Top 20%', actual: t.overall.top20, base: T20, edge: t.edge20 },
-    { label: 'Top 10%', actual: t.overall.top10, base: T10, edge: t.edge10 },
-    { label: 'Top 1%',  actual: t.overall.top1,  base: T1,  edge: t.edge1  },
-    { label: 'Top 0.1%',actual: t.overall.top01, base: T01, edge: t.edge01 },
-  ];
-
+function Unknown({ es }: { es: Entry[] }) {
+  const list = useMemo(() => unknownList(es), [es]);
+  if (!list.length) return null;
   return (
-    <div style={{ marginBottom: 32 }}>
-      <SectionHead title="Finish rates vs. a random player" note="1.00x = coin flip. Above = real edge." />
-
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-        gap: 9, marginBottom: 13,
-      }}>
-        {tiers.map(({ label, actual, base, edge }) => (
-          <div key={label} style={{
-            background: T.panel, border: `1px solid ${T.border}`,
-            borderRadius: 7, padding: '13px 14px',
-          }}>
-            <div className="mono" style={{
-              fontSize: 19, fontWeight: 700, color: edgeColor(actual, base),
-              fontVariantNumeric: 'tabular-nums', lineHeight: 1,
-            }}>
-              {fmtPct(actual, actual < 0.02 ? 2 : 1)}
-            </div>
-            <div style={{ fontSize: 10, color: T.textMuted, marginTop: 4, letterSpacing: '0.04em' }}>
-              {label}
-            </div>
-            <div className="mono" style={{
-              fontSize: 11, marginTop: 5, color: edgeColor(actual, base),
-              fontVariantNumeric: 'tabular-nums',
-            }}>
-              {edge.toFixed(2)}x baseline
-            </div>
-          </div>
-        ))}
+    <Section title="Not enough data" note="how many more entries before a call">
+      <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 10, lineHeight: 1.6 }}>
+        These have a point estimate but an interval too wide to act on. Closest to readable first.
       </div>
-
-      {t.valueTop01 > 0 && t.tailRatio > 1 && (
-        <div style={{
-          background: 'rgba(201,162,39,0.06)', border: `1px solid ${SIG.watch.bd}`,
-          borderLeft: `3px solid ${SIG.watch.c}`, borderRadius: '0 7px 7px 0',
-          padding: '13px 16px', fontSize: 12, color: T.textMuted, lineHeight: 1.7,
+      {list.map(s => (
+        <div key={s.dim + s.key} style={{
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+          padding: '9px 12px', background: BG.unknown, borderLeft: `2px solid ${C.unknown}`,
+          borderRadius: 4, marginBottom: 3,
         }}>
-          <strong style={{ color: SIG.watch.c }}>The tail is the whole game. </strong>
-          One top-0.1% finish is worth{' '}
-          <strong style={{ color: T.textPrimary }}>${t.valueTop01.toFixed(2)}</strong> on average —
-          about <strong style={{ color: T.textPrimary }}>{t.tailRatio.toFixed(0)}x</strong> a
-          top-1% finish (${t.valueTop1.toFixed(2)}). Those top-0.1% finishes are{' '}
-          {fmtPct(t.overall.top01, 2)} of your entries but{' '}
-          <strong style={{ color: T.textPrimary }}>{fmtPct(t.shareTop01, 0)}</strong> of your winnings.
+          <span style={{ fontSize: 13, color: T.textMuted, flex: '1 1 120px' }}>{s.label}</span>
+          <RateBar s={s} />
+          <span className="mono" style={{ fontSize: 12, color: T.textMuted, width: 46, textAlign: 'right' }}>
+            {fmtX(s.rate)}
+          </span>
+          <span className="mono" style={{ fontSize: 11, color: T.gold, width: 96, textAlign: 'right', flexShrink: 0 }}>
+            +{s.needMore.toLocaleString()} needed
+          </span>
         </div>
-      )}
-    </div>
+      ))}
+    </Section>
   );
 }
 
-// ── Generic slice table ───────────────────────────────────
-
-function SliceTable({ title, note, slices, showTail = false }: {
-  title: string; note?: string; slices: Slice[]; showTail?: boolean;
-}) {
-  const rows = slices.filter(s => s.n >= 30);
-  if (rows.length === 0) return null;
-
+function Blocks({ es }: { es: Entry[] }) {
+  const b = useMemo(() => blockBands(es), [es]);
+  if (b.length < 3) return null;
   return (
-    <div style={{ marginBottom: 32 }}>
-      <SectionHead title={title} note={note} />
+    <Section title="Where a slate turns profitable" note="by your best finish in each contest">
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
-            <tr>
-              {['', 'Entries', 'ROI', 'Net', ...(showTail ? ['Top 1%', 'Top 0.1%'] : ['Cash', 'Top 1%']), ''].map((h, i) => (
-                <th key={i} style={{
-                  padding: '7px 9px', textAlign: i === 0 ? 'left' : 'right',
-                  fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                  color: T.textMuted, borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap',
-                }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
+            <tr>{['best finish', 'contests', 'profitable', 'ROI', 'net'].map((h, i) => (
+              <th key={h} style={{
+                padding: '6px 9px', textAlign: i === 0 ? 'left' : 'right', fontSize: 9,
+                letterSpacing: '0.07em', textTransform: 'uppercase', color: T.textMuted,
+                borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap',
+              }}>{h}</th>
+            ))}</tr>
           </thead>
           <tbody>
-            {rows.map(s => {
-              const sig = SIG[s.signal];
+            {b.map(r => {
+              const good = r.roi > 0;
               return (
-                <tr key={s.key}>
-                  <td style={{ padding: '9px', borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap' }}>
-                    <span style={{ fontWeight: 600, color: T.textPrimary }}>{s.label}</span>
+                <tr key={r.label}>
+                  <td style={{ padding: '7px 9px', borderBottom: `1px solid ${T.border}`, color: T.textPrimary, fontWeight: 600 }}>
+                    {r.label}
                   </td>
-                  <td className="mono" style={{ padding: '9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>
-                    {s.n.toLocaleString()}
+                  <td className="mono" style={{ padding: '7px 9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: T.textMuted }}>
+                    {r.blocks.toLocaleString()}
                   </td>
-                  <td className="mono" style={{ padding: '9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: s.signal === 'low-n' ? T.textMuted : sig.c, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                    {fmtRoi(s.roi)}
+                  <td className="mono" style={{ padding: '7px 9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: T.textMuted }}>
+                    {fmtPct(r.profitable, 0)}
                   </td>
-                  <td className="mono" style={{ padding: '9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: s.net >= 0 ? T.gold : T.rust, fontVariantNumeric: 'tabular-nums' }}>
-                    {fmtNet(s.net)}
+                  <td className="mono" style={{ padding: '7px 9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: good ? C.play : C.cut, fontWeight: 700 }}>
+                    {fmtSign(r.roi)}
                   </td>
-                  {showTail ? (
-                    <>
-                      <td className="mono" style={{ padding: '9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: edgeColor(s.top1, T1), fontVariantNumeric: 'tabular-nums' }}>
-                        {fmtPct(s.top1, 2)}
-                      </td>
-                      <td className="mono" style={{ padding: '9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: edgeColor(s.top01, T01), fontVariantNumeric: 'tabular-nums' }}>
-                        {fmtPct(s.top01, 3)}
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="mono" style={{ padding: '9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>
-                        {fmtPct(s.cashRate)}
-                      </td>
-                      <td className="mono" style={{ padding: '9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: edgeColor(s.top1, T1), fontVariantNumeric: 'tabular-nums' }}>
-                        {fmtPct(s.top1, 2)}
-                      </td>
-                    </>
-                  )}
-                  <td style={{ padding: '9px', textAlign: 'right', borderBottom: `1px solid ${T.border}` }}>
-                    <Badge signal={s.signal} />
+                  <td className="mono" style={{ padding: '7px 9px', textAlign: 'right', borderBottom: `1px solid ${T.border}`, color: r.net >= 0 ? T.gold : T.rust }}>
+                    {fmtNet(r.net)}
                   </td>
                 </tr>
               );
@@ -318,57 +244,34 @@ function SliceTable({ title, note, slices, showTail = false }: {
           </tbody>
         </table>
       </div>
-    </div>
-  );
-}
-
-// ── Recent form ───────────────────────────────────────────
-
-function Form({ entries }: { entries: Entry[] }) {
-  const rows = useMemo(() => buildForm(entries), [entries]);
-  const cooling = rows.filter(r => r.cooling);
-  if (cooling.length === 0) return null;
-
-  return (
-    <div style={{ marginBottom: 32 }}>
-      <SectionHead title="Cooling off" note="Last 90 days vs. lifetime" />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {cooling.map(r => (
-          <div key={r.sport} style={{
-            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-            padding: '10px 13px', background: T.panel,
-            border: `1px solid ${T.border}`, borderLeft: `2px solid ${SIG.remove.c}`,
-            borderRadius: 5,
-          }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: T.textPrimary, flex: 1, minWidth: 70 }}>
-              {r.sport}
-            </span>
-            <span className="mono" style={{ fontSize: 12, color: SIG.remove.c, fontVariantNumeric: 'tabular-nums' }}>
-              {fmtRoi(r.recentRoi)} now
-            </span>
-            <span style={{ fontSize: 11, color: T.textMuted }}>vs</span>
-            <span className="mono" style={{ fontSize: 12, color: r.lifeRoi >= 0 ? T.gold : T.textMuted, fontVariantNumeric: 'tabular-nums' }}>
-              {fmtRoi(r.lifeRoi)} lifetime
-            </span>
-            <span className="mono" style={{ fontSize: 11, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>
-              {r.recentN.toLocaleString()}n
-            </span>
-          </div>
-        ))}
+      <div style={{ fontSize: 11, color: T.textMuted, marginTop: 9, lineHeight: 1.6 }}>
+        Read down to where ROI crosses zero — that's the finish you need somewhere in a block
+        just to break even. Everything below it is losing volume.
       </div>
-    </div>
+    </Section>
   );
 }
 
-// ── DashboardSection ──────────────────────────────────────
+function Breakdown({ es }: { es: Entry[] }) {
+  const d = useMemo(() => dimensions(es), [es]);
+  const groups: [string, Slice[]][] = [
+    ['By sport', d.sport], ['By sport & format', d.format],
+    ['By entry fee', d.fee], ['By field size', d.field], ['By slate size', d.slate],
+  ];
+  return (
+    <>
+      {groups.filter(([, g]) => g.length > 1).map(([title, g]) => (
+        <Section key={title} title={title}>
+          {[...g].sort((a, b) => b.rate - a.rate).map(s => <Row key={s.dim + s.key} s={s} />)}
+        </Section>
+      ))}
+    </>
+  );
+}
+
+// ── Root ──────────────────────────────────────────────────
 
 export function DashboardSection({ filtered }: { filtered: Entry[] }) {
-  const sports  = useMemo(() => bySport(filtered),       [filtered]);
-  const formats = useMemo(() => bySportFormat(filtered), [filtered]);
-  const fees    = useMemo(() => byFee(filtered),         [filtered]);
-  const fields  = useMemo(() => byField(filtered),       [filtered]);
-  const edges   = useMemo(() => findEdges(filtered),     [filtered]);
-
   if (filtered.length === 0) {
     return (
       <div style={{ color: T.textMuted, fontSize: 14, padding: '32px 0', textAlign: 'center' }}>
@@ -376,59 +279,27 @@ export function DashboardSection({ filtered }: { filtered: Entry[] }) {
       </div>
     );
   }
-
   return (
     <div>
-      <Leaks entries={filtered} />
-
-      {edges.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
-          <SectionHead title="Press these" note={`${ROI_KEEP}%+ ROI with ${MIN_N}+ entries`} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {edges.map(s => (
-              <div key={s.key} style={{
-                display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-                padding: '10px 13px', background: SIG.keep.bg,
-                border: `1px solid ${SIG.keep.bd}`, borderLeft: `2px solid ${SIG.keep.c}`,
-                borderRadius: 5,
-              }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: T.textPrimary, flex: 1, minWidth: 110 }}>
-                  {s.label}
-                </span>
-                <span className="mono" style={{ fontSize: 13, fontWeight: 700, color: SIG.keep.c, fontVariantNumeric: 'tabular-nums' }}>
-                  {fmtRoi(s.roi)}
-                </span>
-                <span className="mono" style={{ fontSize: 12, color: T.gold, width: 58, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                  {fmtNet(s.net)}
-                </span>
-                <span className="mono" style={{ fontSize: 11, color: T.textMuted, width: 54, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                  {s.n.toLocaleString()}n
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <CoreSplit entries={filtered} />
-      <Tail entries={filtered} />
-      <Form entries={filtered} />
-
-      <SliceTable title="By sport"          slices={sports}  showTail />
-      <SliceTable title="By sport & format" slices={formats} note="Classic and Showdown are different games" showTail />
-      <SliceTable title="By entry fee"      slices={fees} />
-      <SliceTable title="By field size"     slices={fields} note="Tail ceiling rises with field size" showTail />
-
+      <Headline es={filtered} />
+      <Cuts es={filtered} />
+      <Plays es={filtered} />
+      <Unknown es={filtered} />
+      <Blocks es={filtered} />
+      <Breakdown es={filtered} />
       <div style={{
-        marginTop: 22, fontSize: 11.5, color: T.textMuted, lineHeight: 1.85,
-        borderTop: `1px solid ${T.border}`, paddingTop: 14,
+        marginTop: 20, paddingTop: 14, borderTop: `1px solid ${T.border}`,
+        fontSize: 11.5, color: T.textMuted, lineHeight: 1.85,
       }}>
-        <strong style={{ color: T.textPrimary }}>How signals work: </strong>
-        <span style={{ color: SIG.keep.c }}>Keep</span> ≥{ROI_KEEP}% ROI ·{' '}
-        <span style={{ color: SIG.watch.c }}>Watch</span> {ROI_WATCH}% to {ROI_KEEP}% ·{' '}
-        <span style={{ color: SIG.remove.c }}>Cut</span> below {ROI_WATCH}% — needs {MIN_N}+ entries.
-        {' '}Signals are ROI-based, not cash-rate-based: in GPP play cash rate barely moves between
-        winning and losing formats, while ROI separates them cleanly.
+        <strong style={{ color: T.textPrimary }}>How to read this. </strong>
+        Everything is scored on <strong style={{ color: T.textPrimary }}>top-1% finish rate</strong> as a
+        multiple of a random player. 1.00x is a coin flip; the white tick on every bar marks it.
+        The coloured band is the 95% range, clustered by contest — entries in one contest share a slate,
+        so they aren't independent observations.
+        <br />
+        ROI is shown but never decided on: across this dataset, deleting a single winning entry moved
+        slice ROI by up to 36 points and moved top-1% rate by 0.06. A slice only gets a verdict once its
+        range is narrower than {MAX_CI_WIDTH.toFixed(2)}x and clears 1.00x in one direction.
       </div>
     </div>
   );

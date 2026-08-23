@@ -1,48 +1,16 @@
 export interface Entry {
-  sport: string;
-  gameType: string;
+  sport:     string;
+  gameType:  string;
   entryName: string;
-  date: Date | null;
-  place: number;
-  entries: number;
-  pct: number;
-  fee: number;
-  winnings: number;
-  maxSize: number | null;
-}
-
-export interface Band {
-  label: string;
-  baseline: number;
-  actual: number;
-  hits: number;
-}
-
-export interface SportStat {
-  sport: string;
-  n: number;
-  bands: Band[];
-  roi: number;
-  fees: number;
-  winnings: number;
-}
-
-export interface OverallStat {
-  n: number;
-  bands: Band[];
-  roi: number;
-  fees: number;
-  winnings: number;
-}
-
-export interface MaxSize {
-  size: number;
-  count: number;
-}
-
-export interface FeeOption {
-  fee: number;
-  count: number;
+  contestId: string;
+  date:      Date | null;
+  place:     number;
+  entries:   number;   // field size
+  pct:       number;   // place / field — lower is better
+  fee:       number;
+  winnings:  number;
+  pool:      number;   // advertised prize pool
+  maxSize:   number | null;
 }
 
 export type DateFilter = 'all' | '30' | '60' | '90' | 'custom';

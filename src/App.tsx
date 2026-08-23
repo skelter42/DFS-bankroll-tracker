@@ -6,7 +6,6 @@ import { parseMoney, extractMax } from './lib/parse';
 import { saveEntries, loadSaved, clearSaved } from './lib/storage';
 import { UploadZone } from './components/UploadZone';
 import { FilterBar } from './components/FilterBar';
-import { KpiStrip } from './components/KpiStrip';
 import { MonthlyChart } from './components/MonthlyChart';
 import { DashboardSection } from './components/Dashboard';
 import { DFSAgent } from './components/DFSAgent';
@@ -48,12 +47,14 @@ export default function App() {
                 sport:     r.Sport,
                 gameType:  r.Game_Type ?? '',
                 entryName: r.Entry ?? '',
+                contestId: r.Contest_Key ?? '',
                 date:      r.Contest_Date_EST ? new Date(r.Contest_Date_EST) : null,
                 place,
                 entries,
                 pct:       place / entries,
                 fee:       parseMoney(r.Entry_Fee),
                 winnings:  parseMoney(r.Winnings_Non_Ticket) + parseMoney(r.Winnings_Ticket),
+                pool:      parseMoney(r.Prize_Pool),
                 maxSize:   extractMax(r.Entry),
               };
             })
@@ -130,22 +131,6 @@ export default function App() {
     }
     return out;
   }, [rows, sportFilter, typeKeys, dateFilter, maxDate, customFrom, customTo]);
-
-  const kpis = useMemo(() => {
-    if (!rows) return null;
-    const fees     = filtered.reduce((s, r) => s + r.fee, 0);
-    const winnings = filtered.reduce((s, r) => s + r.winnings, 0);
-    const net      = winnings - fees;
-    const cashes   = filtered.filter(r => r.winnings > 0).length;
-    return {
-      entries:  filtered.length,
-      fees,
-      winnings,
-      net,
-      roi:      fees > 0 ? net / fees : 0,
-      cashRate: filtered.length > 0 ? cashes / filtered.length : 0,
-    };
-  }, [rows, filtered]);
 
   const monthlyPnl = useMemo(() => {
     if (!rows) return [];
@@ -255,7 +240,6 @@ export default function App() {
               </button>
             </div>
 
-            {kpis && <KpiStrip kpis={kpis} />}
             <MonthlyChart data={monthlyPnl} />
 
             <FilterBar
