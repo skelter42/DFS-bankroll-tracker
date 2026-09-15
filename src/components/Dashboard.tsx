@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { T } from '../constants';
 import {
-  headline, cutList, playList, unknownList, dimensions, blockBands,
+  headline, cutList, playList, unknownList, divergeList, trajectory, dimensions, blockBands,
   fmtX, fmtNet, fmtSign, fmtPct, MAX_CI_WIDTH,
 } from '../lib/engine';
 import type { Slice, Verdict } from '../lib/engine';
@@ -202,6 +202,110 @@ function Unknown({ es }: { es: Entry[] }) {
   );
 }
 
+/**
+ * The case where the bankroll gives the wrong answer: profit on a falling
+ * rate, or a loss on a rising one. Everything else on this page can be read
+ * off the verdict colour; this cannot, because the money looks fine.
+ */
+function Diverge({ es }: { es: Entry[] }) {
+  const list = useMemo(() => divergeList(es), [es]);
+  if (!list.length) return null;
+  return (
+    <Section title="Money and rate disagree" note="where the bankroll misleads">
+      <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 10, lineHeight: 1.6 }}>
+        Top-1% rate is the decision metric; ROI is reported, not decided on. These
+        are the slices where the two point opposite ways.
+      </div>
+      {list.map(s => {
+        const mirage = s.diverge === 'mirage';
+        const tint = mirage ? C.cut : C.play;
+        return (
+          <div key={s.dim + s.key} style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            padding: '9px 12px', background: mirage ? BG.cut : BG.play,
+            borderLeft: `2px solid ${tint}`, borderRadius: 4, marginBottom: 3,
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: T.textPrimary, flex: '1 1 120px', minWidth: 100 }}>
+              {s.label}
+            </span>
+            <span style={{ fontSize: 11, color: tint, flex: '1 1 180px', minWidth: 150, lineHeight: 1.5 }}>
+              {mirage
+                ? `up ${fmtSign(s.roi)} on ${fmtX(s.rel)} of your usual rate — profit is variance`
+                : `down ${fmtSign(s.roi)} on ${fmtX(s.rel)} of your usual rate — cold run, not a leak`}
+            </span>
+            <span className="mono" style={{
+              fontSize: 13, fontWeight: 700, color: tint, width: 46,
+              textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums',
+            }}>
+              {fmtX(s.rel)}
+            </span>
+            <span className="mono" style={{
+              fontSize: 11, color: s.net >= 0 ? T.gold : T.rust, width: 54,
+              textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums',
+            }}>
+              {fmtNet(s.net)}
+            </span>
+            <span className="mono" style={{ fontSize: 10, color: T.textMuted, width: 48, textAlign: 'right', flexShrink: 0 }}>
+              {s.n.toLocaleString()}n
+            </span>
+          </div>
+        );
+      })}
+    </Section>
+  );
+}
+
+/**
+ * Season over season, per sport. Held to an absolute yardstick rather than the
+ * current window's baseline, because a decline that touches everything cancels
+ * out of every relative view on this page.
+ */
+function Trajectory({ es }: { es: Entry[] }) {
+  const tracks = useMemo(() => trajectory(es), [es]);
+  if (!tracks.length) return null;
+  return (
+    <Section title="Season over season" note="top-1% rate against a fixed yardstick">
+      <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 10, lineHeight: 1.6 }}>
+        Fields under 100 entries are excluded — a top-1% finish does not exist in them.
+        Biggest decline first.
+      </div>
+      {tracks.map(t => {
+        const worse = t.drop < -0.15;
+        return (
+          <div key={t.sport} style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            padding: '9px 12px', background: worse ? BG.cut : BG.unknown,
+            borderLeft: `2px solid ${worse ? C.cut : C.unknown}`,
+            borderRadius: 4, marginBottom: 3,
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: T.textPrimary, width: 56, flexShrink: 0 }}>
+              {t.sport}
+            </span>
+            <div style={{ display: 'flex', gap: 14, flex: '1 1 240px', flexWrap: 'wrap' }}>
+              {t.seasons.map((v, i) => (
+                <span key={v.year} className="mono" style={{
+                  fontSize: 11, color: i === t.seasons.length - 1 ? T.textPrimary : T.textMuted,
+                  fontVariantNumeric: 'tabular-nums',
+                }}>
+                  <span style={{ color: T.textMuted }}>{v.year} </span>
+                  <span style={{ fontWeight: 700 }}>{fmtX(v.rate)}</span>
+                  <span style={{ color: v.net >= 0 ? T.gold : T.rust }}> {fmtNet(v.net)}</span>
+                </span>
+              ))}
+            </div>
+            <span className="mono" style={{
+              fontSize: 12, fontWeight: 700, color: worse ? C.cut : T.textMuted,
+              width: 54, textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums',
+            }}>
+              {t.drop >= 0 ? '+' : ''}{t.drop.toFixed(2)}x
+            </span>
+          </div>
+        );
+      })}
+    </Section>
+  );
+}
+
 function Blocks({ es }: { es: Entry[] }) {
   const b = useMemo(() => blockBands(es), [es]);
   if (b.length < 3) return null;
@@ -284,6 +388,8 @@ export function DashboardSection({ filtered }: { filtered: Entry[] }) {
       <Headline es={filtered} />
       <Cuts es={filtered} />
       <Plays es={filtered} />
+      <Diverge es={filtered} />
+      <Trajectory es={filtered} />
       <Unknown es={filtered} />
       <Blocks es={filtered} />
       <Breakdown es={filtered} />

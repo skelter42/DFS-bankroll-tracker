@@ -17,6 +17,22 @@ import type { Entry } from '../types';
 
 export type Verdict = 'play' | 'cut' | 'watch' | 'unknown';
 
+/**
+ * Where the money and the rate disagree.
+ *
+ * 'mirage'  — profitable, but finishing top 1% less often than you usually do.
+ *             The profit is variance sitting on top of a worse process.
+ * 'unlucky' — losing, but finishing top 1% more often than you usually do.
+ *             Cutting this is cutting a winner during a cold run.
+ *
+ * Only set where the interval is readable, and only past a margin wide
+ * enough that it is not rounding.
+ */
+export type Divergence = 'mirage' | 'unlucky' | null;
+
+/** How far rel must sit from 1.0 before a divergence is worth naming. */
+export const DIVERGE_MARGIN = 0.05;
+
 /** A top-1% finish is the break-even line: blocks peaking at 0.5–1% ran +2.9%; at 1–3%, −28%. */
 export const T1  = 0.01;
 export const T01 = 0.001;
@@ -60,9 +76,20 @@ export interface Slice {
 
   tailRate: number;   // top-0.1% as a multiple of its baseline
   verdict:  Verdict;
+  diverge:  Divergence;
+  /** Entries whose field was large enough for a top-1% finish to exist. */
+  rateable: number;
   /** Extra entries needed before the interval would be readable. */
   needMore: number;
 }
+
+/**
+ * Can this entry's field even produce a finish at the threshold?
+ * First place is percentile 1/entries, so a top-1% finish needs a field of
+ * 100 or more, and a top-0.1% finish a field of 1,000.
+ */
+export const canReach = (e: Entry, threshold: number) =>
+  e.entries > 0 && 1 / e.entries <= threshold;
 
 // ── Cluster-robust rate estimate ──────────────────────────
 
@@ -73,9 +100,13 @@ export interface Slice {
  * understates the variance badly — they share a slate, so they
  * hit or miss together. Clustering on contest fixes that.
  */
-function clusteredRate(es: Entry[], threshold: number): { rate: number; lo: number; hi: number; clusters: number } {
+function clusteredRate(es: Entry[], threshold: number): { rate: number; lo: number; hi: number; clusters: number; eligible: number } {
   const by = new Map<string, { hits: number; n: number }>();
   for (const e of es) {
+    // In a field of 80, first place is the 1.25th percentile — the top 1% is
+    // not a place anyone can finish in. Counting those entries as misses
+    // scores a whole bucket at 0.00x and cuts it, however much it earns.
+    if (!canReach(e, threshold)) continue;
     const k = e.contestId || `${e.sport}|${e.date?.toDateString() ?? ''}`;
     const c = by.get(k) ?? { hits: 0, n: 0 };
     c.n++;
@@ -87,12 +118,12 @@ function clusteredRate(es: Entry[], threshold: number): { rate: number; lo: numb
   const N  = es.length;
   const H  = cl.reduce((s, c) => s + c.hits, 0);
   const rate = N > 0 ? H / N : 0;
-  if (K < 2 || N === 0) return { rate, lo: 0, hi: 1, clusters: K };
+  if (K < 2 || N === 0) return { rate, lo: 0, hi: 1, clusters: K, eligible: N };
 
   // Var(ratio) with cluster-robust residuals.
   const ss = cl.reduce((s, c) => { const r = c.hits - rate * c.n; return s + r * r; }, 0);
   const se = Math.sqrt((K / (K - 1)) * ss) / N;
-  return { rate, lo: Math.max(0, rate - 1.96 * se), hi: rate + 1.96 * se, clusters: K };
+  return { rate, lo: Math.max(0, rate - 1.96 * se), hi: rate + 1.96 * se, clusters: K, eligible: N };
 }
 
 // ── Formatting ────────────────────────────────────────────
@@ -153,14 +184,25 @@ export function analyse(es: Entry[], key: string, label: string, dim: string, ba
   const losing = roi < 0 && roiExTop < 0;   // not one bad break
 
   let verdict: Verdict;
-  if (n < MIN_N || width > MAX_CI_WIDTH)   verdict = 'unknown';
+  // a.eligible, not n: entries in fields too small to contain a top-1% finish
+  // carry no information about the rate, so they cannot license a verdict.
+  if (a.eligible < MIN_N || width > MAX_CI_WIDTH) verdict = 'unknown';
   else if (relLo > 1.0 && net > 0)         verdict = 'play';
   else if (relHi < 1.0 || (losing && rel < 1)) verdict = 'cut';
   else                                     verdict = 'watch';
 
+  // ROI and the rate pointing opposite ways is the case where reading the
+  // bankroll gets you the wrong answer, so name it rather than leaving the
+  // slice in 'watch' with no explanation.
+  let diverge: Divergence = null;
+  if (verdict !== 'unknown') {
+    if (roi > 0 && rel < 1 - DIVERGE_MARGIN)      diverge = 'mirage';
+    else if (roi < 0 && rel > 1 + DIVERGE_MARGIN) diverge = 'unlucky';
+  }
+
   // entries needed to shrink the interval to MAX_CI_WIDTH (scales as 1/sqrt(n))
   const needMore = width > MAX_CI_WIDTH
-    ? Math.max(0, Math.ceil(n * Math.pow(width / MAX_CI_WIDTH, 2)) - n)
+    ? Math.max(0, Math.ceil(a.eligible * Math.pow(width / MAX_CI_WIDTH, 2)) - a.eligible)
     : 0;
 
   return {
@@ -170,7 +212,7 @@ export function analyse(es: Entry[], key: string, label: string, dim: string, ba
     edge: roi + rake, rake,
     roi, roiExTop, net, fees,
     tailRate: b.rate / T01,
-    verdict, needMore,
+    verdict, diverge, rateable: a.eligible, needMore,
   };
 }
 
@@ -216,6 +258,52 @@ export function slateLabel(entryName: string): string {
 /** Your own overall top-1% rate — the yardstick every slice is measured against. */
 export function baselineRate(es: Entry[]): number {
   return analyse(es, 'all', 'all', 'all').rate;
+}
+
+export interface Season { year: number; rate: number; net: number; n: number }
+export interface Track  { sport: string; seasons: Season[]; drop: number }
+
+/**
+ * Rate by sport by season.
+ *
+ * Every other view here is relative to the current window, so a player whose
+ * whole game is sliding looks level — each slice is measured against a
+ * baseline that slid with it. This is the one view that holds the yardstick
+ * still, which is the only way a year-over-year decline shows up at all.
+ *
+ * `drop` is the newest season against the best earlier one; negative means
+ * this year is worse.
+ */
+export function trajectory(es: Entry[], minPerSeason = MIN_N): Track[] {
+  const bySport = new Map<string, Map<number, Entry[]>>();
+  for (const e of es) {
+    if (!e.date || !canReach(e, T1)) continue;
+    const years = bySport.get(e.sport) ?? new Map<number, Entry[]>();
+    const y = e.date.getFullYear();
+    years.set(y, [...(years.get(y) ?? []), e]);
+    bySport.set(e.sport, years);
+  }
+
+  const out: Track[] = [];
+  for (const [sport, years] of bySport) {
+    const seasons: Season[] = [];
+    for (const [year, list] of [...years].sort((a, b) => a[0] - b[0])) {
+      if (list.length < minPerSeason) continue;
+      const fees = list.reduce((t, e) => t + e.fee, 0);
+      const won  = list.reduce((t, e) => t + e.winnings, 0);
+      seasons.push({
+        year,
+        rate: clusteredRate(list, T1).rate / T1,
+        net: won - fees,
+        n: list.length,
+      });
+    }
+    if (seasons.length < 2) continue;
+    const last = seasons[seasons.length - 1];
+    const best = Math.max(...seasons.slice(0, -1).map(x => x.rate));
+    out.push({ sport, seasons, drop: last.rate - best });
+  }
+  return out.sort((a, b) => a.drop - b.drop);
 }
 
 export function dimensions(es: Entry[]) {
@@ -267,6 +355,22 @@ export function playList(es: Entry[], limit = 6): Slice[] {
   return allSlices(es)
     .filter(s => s.verdict === 'play')
     .sort((a, b) => b.rel - a.rel)
+    .slice(0, limit);
+}
+
+/**
+ * Slices where the money says one thing and the rate says another, worst
+ * disagreement first. Mirages rank ahead of cold runs: being wrong about
+ * something you are actively funding costs more than being wrong about
+ * something you already suspect.
+ */
+export function divergeList(es: Entry[], limit = 5): Slice[] {
+  return allSlices(es)
+    .filter(s => s.diverge !== null)
+    .sort((a, b) => {
+      if (a.diverge !== b.diverge) return a.diverge === 'mirage' ? -1 : 1;
+      return Math.abs(a.rel - 1) > Math.abs(b.rel - 1) ? -1 : 1;
+    })
     .slice(0, limit);
 }
 
